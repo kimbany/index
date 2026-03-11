@@ -724,7 +724,7 @@ function fmtDate(d){
 // ════════════════════════════════
 function setView(v){
   currentView = v;
-  ['check','history','manage'].forEach(x=>{
+  ['check','history','members','manage'].forEach(x=>{
     document.getElementById('view-'+x).style.display = x===v?'':'none';
     document.getElementById('tab-'+x).classList.toggle('active', x===v);
   });
