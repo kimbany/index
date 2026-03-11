@@ -885,10 +885,10 @@ function renderStats(){
         </div>
         <div style="font-family:'Space Mono',monospace;font-size:22px;font-weight:700;color:${avgPct>=80?'var(--present)':avgPct>=60?'#f59e0b':'var(--danger)'}">${avgPct}%</div>
       </div>
-      ${studentStats.map((s,i)=>`
+      ${studentStats.map((s,i)=>{const r=roleLabel(s.num); return `
         <div class="stat-row">
           <div class="stat-rank">${i+1}</div>
-          <div class="s-avatar" style="width:32px;height:32px;font-size:14px;flex-shrink:0">${emoji(s.name)}</div>
+          <span class="role-badge" style="color:${r.color};background:${r.bg};border:1px solid ${r.border};flex-shrink:0">${r.text}</span>
           <div class="stat-bar-wrap">
             <div class="stat-name-row">
               <span class="stat-name">${s.name}</span>
@@ -899,7 +899,7 @@ function renderStats(){
             </div>
             <div class="stat-count">${s.presentCount} / ${totalDays}일 출석</div>
           </div>
-        </div>`).join('')}
+        </div>`;}).join('')}
     `;
     wrap.appendChild(sec);
   });
