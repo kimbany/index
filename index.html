@@ -241,6 +241,42 @@ header {
 .nav-btn.primary  { background:var(--accent); color:#fff; box-shadow:0 4px 20px rgba(79,140,255,.3); }
 .nav-btn.secondary{ background:var(--card2); color:var(--text); border:1.5px solid var(--border); }
 
+/* FAMILY JUMP BAR */
+.family-jump-bar {
+  position: sticky;
+  top: 89px;
+  z-index: 90;
+  background: rgba(15,17,23,0.96);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 8px 16px;
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.family-jump-bar::-webkit-scrollbar { display: none; }
+.family-jump-btn {
+  flex-shrink: 0;
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1.5px solid var(--border);
+  background: var(--card2);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: 'Noto Sans KR', sans-serif;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.family-jump-btn:active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  transform: scale(0.95);
+}
+
 /* MODALS */
 .overlay {
   position:fixed; inset:0; background:rgba(0,0,0,.78); backdrop-filter:blur(6px);
@@ -421,7 +457,10 @@ header {
 </header>
 
 <!-- CHECK VIEW -->
-<div id="view-check"><div class="classes-wrap" id="checkWrap"></div></div>
+<div id="view-check">
+  <div class="family-jump-bar" id="familyJumpBar"></div>
+  <div class="classes-wrap" id="checkWrap" style="padding-bottom:90px"></div>
+</div>
 
 <!-- HISTORY VIEW -->
 <div id="view-history" style="display:none">
@@ -802,6 +841,31 @@ function initDraft(){
 function renderCheck(){
   const wrap = document.getElementById('checkWrap');
   wrap.innerHTML = '';
+
+  // 가족 점프바 렌더
+  const jumpBar = document.getElementById('familyJumpBar');
+  jumpBar.innerHTML = '';
+  if(S.classes.length > 1){
+    jumpBar.style.display = 'flex';
+    S.classes.forEach(cls=>{
+      const btn = document.createElement('button');
+      btn.className = 'family-jump-btn';
+      btn.textContent = cls;
+      btn.addEventListener('click', ()=>{
+        const target = document.getElementById('cls-section-' + cls.replace(/[^a-zA-Z0-9가-힣]/g,'_'));
+        if(target){
+          const headerH = document.querySelector('header').offsetHeight;
+          const jumpBarH = jumpBar.offsetHeight;
+          const top = target.getBoundingClientRect().top + window.scrollY - headerH - jumpBarH - 8;
+          window.scrollTo({ top, behavior: 'smooth' });
+        }
+      });
+      jumpBar.appendChild(btn);
+    });
+  } else {
+    jumpBar.style.display = 'none';
+  }
+
   if(!S.classes.length){
     wrap.innerHTML = '<div class="empty">가족을 먼저 추가해주세요<br>⚙ 가족&멤버 편집 탭에서 추가하세요</div>';
     return;
@@ -813,6 +877,7 @@ function renderCheck(){
 
     const sec = document.createElement('div');
     sec.className = 'class-section';
+    sec.id = 'cls-section-' + cls.replace(/[^a-zA-Z0-9가-힣]/g,'_');
     sec.style.animationDelay = i*0.06+'s';
     sec.innerHTML = `
       <div class="class-header">
