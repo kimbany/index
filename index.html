@@ -276,6 +276,34 @@ header {
 .btn.primary { background:var(--accent); color:#fff; }
 .btn.cancel  { background:var(--card2); color:var(--muted); border:1.5px solid var(--border); }
 
+/* SORT BUTTON */
+.sort-btn {
+  padding:5px 12px; border-radius:20px; border:1.5px solid var(--border);
+  background:var(--card2); color:var(--muted); font-size:12px; font-weight:700;
+  cursor:pointer; font-family:inherit; transition:all .15s;
+}
+.sort-btn.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+
+/* MEMBER LIST */
+.member-row {
+  display:flex; align-items:center; gap:12px;
+  padding:14px 16px; border-bottom:1px solid var(--border);
+  cursor:pointer; transition:background .15s;
+}
+.member-row:active { background:var(--card2); }
+.member-row:last-child { border-bottom:none; }
+.member-info { flex:1; min-width:0; }
+.member-name { font-size:15px; font-weight:700; }
+.member-sub  { font-size:11px; color:var(--muted); margin-top:2px; }
+
+/* DETAIL FIELD */
+.detail-field {
+  background:var(--card2); border:1px solid var(--border); border-radius:12px;
+  padding:12px 14px; display:flex; gap:12px; align-items:center;
+}
+.detail-label { font-size:11px; color:var(--muted); width:60px; flex-shrink:0; }
+.detail-value { font-size:14px; font-weight:700; }
+
 /* CALENDAR */
 .cal-nav-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
 .cal-title { font-size:16px; font-weight:900; }
@@ -377,6 +405,7 @@ header {
   <div class="view-tabs">
     <div class="view-tab active" id="tab-check">✅ 출석체크</div>
     <div class="view-tab"        id="tab-history">📋 기록보기</div>
+    <div class="view-tab"        id="tab-members">👥 멤버</div>
     <div class="view-tab"        id="tab-manage">⚙ 편집</div>
   </div>
 </header>
@@ -401,6 +430,39 @@ header {
   <!-- Stats -->
   <div id="history-stats" style="display:none">
     <div class="classes-wrap" id="statsWrap"></div>
+  </div>
+</div>
+
+<!-- MEMBERS VIEW -->
+<div id="view-members" style="display:none">
+  <!-- 정렬 바 -->
+  <div style="padding:12px 16px 0;display:flex;gap:8px;align-items:center">
+    <span style="font-size:12px;color:var(--muted);font-weight:700;white-space:nowrap">정렬</span>
+    <div style="display:flex;gap:6px;flex-wrap:wrap" id="sortBtns">
+      <button class="sort-btn active" id="sort-name">이름순</button>
+      <button class="sort-btn" id="sort-dept">청년부</button>
+      <button class="sort-btn" id="sort-family">가족명</button>
+    </div>
+  </div>
+  <div class="classes-wrap" id="membersWrap"></div>
+</div>
+
+<!-- MEMBER DETAIL MODAL -->
+<div class="overlay" id="memberDetailOverlay" onclick="closeMemberDetailOut(event)">
+  <div class="sheet" style="max-height:85vh;overflow-y:auto">
+    <div class="sheet-handle"></div>
+    <div style="text-align:center;padding:8px 0 20px">
+      <div id="detailRole" style="display:inline-block;margin-bottom:10px"></div>
+      <div id="detailName" style="font-size:22px;font-weight:900"></div>
+      <div id="detailSub"  style="font-size:13px;color:var(--muted);margin-top:4px"></div>
+    </div>
+    <div id="detailFields" style="display:flex;flex-direction:column;gap:10px"></div>
+    <div style="margin-top:20px">
+      <button id="detailEditBtn" style="width:100%;padding:13px;border-radius:12px;border:none;
+        background:var(--accent);color:#fff;font-size:14px;font-weight:700;
+        cursor:pointer;font-family:inherit;">✏️ 멤버 정보 수정</button>
+    </div>
+    <div style="height:8px"></div>
   </div>
 </div>
 
@@ -476,7 +538,15 @@ header {
         <label class="inp-label">이름</label>
         <input class="inp" id="sName" placeholder="홍길동" maxlength="20">
       </div>
-      <div style="width:80px">
+      <div style="width:72px">
+        <label class="inp-label">청년부</label>
+        <select class="inp" id="sDept">
+          <option value="">-</option>
+          <option value="1">1청년부</option>
+          <option value="2">2청년부</option>
+        </select>
+      </div>
+      <div style="width:64px">
         <label class="inp-label">번호</label>
         <input class="inp" id="sNum" placeholder="1" type="number" min="1">
       </div>
@@ -666,6 +736,9 @@ function setView(v){
   } else if(v==='history'){
     nav.style.display='flex'; saveBtn.style.display='none';
     renderHistory();
+  } else if(v==='members'){
+    nav.style.display='none';
+    renderMembers();
   } else {
     nav.style.display='none';
     setManageTab(manageTab);
@@ -910,6 +983,109 @@ function renderStats(){
 }
 
 // ════════════════════════════════
+//  MEMBERS VIEW
+// ════════════════════════════════
+let memberSort = 'name';
+
+function setSort(type){
+  memberSort = type;
+  ['name','dept','family'].forEach(t=>{
+    document.getElementById('sort-'+t).classList.toggle('active', t===type);
+  });
+  renderMembers();
+}
+
+function renderMembers(){
+  const wrap = document.getElementById('membersWrap');
+  wrap.innerHTML = '';
+
+  let sorted = [...S.students];
+  if(memberSort==='name'){
+    sorted.sort((a,b)=>a.name.localeCompare(b.name,'ko'));
+  } else if(memberSort==='dept'){
+    sorted.sort((a,b)=>{
+      const da = a.dept||'9', db = b.dept||'9';
+      return da===db ? a.name.localeCompare(b.name,'ko') : da.localeCompare(db);
+    });
+  } else {
+    sorted.sort((a,b)=>{
+      return a.cls===b.cls ? a.name.localeCompare(b.name,'ko') : a.cls.localeCompare(b.cls,'ko');
+    });
+  }
+
+  if(!sorted.length){
+    wrap.innerHTML='<div class="empty">멤버가 없어요<br>편집 탭에서 추가해보세요</div>';
+    return;
+  }
+
+  // 그룹 헤더 처리
+  let lastGroup = null;
+  sorted.forEach(s=>{
+    let group = '';
+    if(memberSort==='name')   group = s.name[0];
+    else if(memberSort==='dept') group = s.dept ? s.dept+'청년부' : '미지정';
+    else group = s.cls || '미지정';
+
+    if(group !== lastGroup){
+      lastGroup = group;
+      const hdr = document.createElement('div');
+      hdr.style.cssText='padding:8px 16px 4px;font-size:11px;font-weight:900;color:var(--accent);letter-spacing:1px;background:var(--bg);';
+      hdr.textContent = group;
+      wrap.appendChild(hdr);
+    }
+
+    const r = roleLabel(s.num);
+    const row = document.createElement('div');
+    row.className='member-row';
+    row.innerHTML=`
+      <span class="role-badge" style="color:${r.color};background:${r.bg};border:1px solid ${r.border};flex-shrink:0">${r.text}</span>
+      <div class="member-info">
+        <div class="member-name">${s.name}</div>
+        <div class="member-sub">${s.dept?s.dept+'청년부 · ':''}${s.cls}</div>
+      </div>
+      <div style="color:var(--muted);font-size:18px">›</div>`;
+    row.addEventListener('click', ()=>openMemberDetail(s.id));
+    wrap.appendChild(row);
+  });
+}
+
+function openMemberDetail(id){
+  const s = S.students.find(x=>x.id===id);
+  if(!s) return;
+  const r = roleLabel(s.num);
+
+  document.getElementById('detailRole').innerHTML =
+    `<span class="role-badge" style="color:${r.color};background:${r.bg};border:1px solid ${r.border}">${r.text}</span>`;
+  document.getElementById('detailName').textContent = s.name;
+  document.getElementById('detailSub').textContent =
+    `${s.dept?s.dept+'청년부 · ':''}${s.cls}`;
+
+  const fields = [
+    { label:'청년부', value: s.dept ? s.dept+'청년부' : '-' },
+    { label:'가족',   value: s.cls || '-' },
+    { label:'생년월일', value: s.birth || '-' },
+    { label:'연락처', value: s.phone || '-' },
+    { label:'등록일', value: s.regDate || '-' },
+  ];
+
+  document.getElementById('detailFields').innerHTML = fields.map(f=>`
+    <div class="detail-field">
+      <div class="detail-label">${f.label}</div>
+      <div class="detail-value">${f.value}</div>
+    </div>`).join('');
+
+  document.getElementById('detailEditBtn')._sid = id;
+  document.getElementById('memberDetailOverlay').classList.add('open');
+}
+
+function closeMemberDetail(){
+  document.getElementById('memberDetailOverlay').classList.remove('open');
+}
+function closeMemberDetailOut(e){
+  if(e.target===document.getElementById('memberDetailOverlay')) closeMemberDetail();
+}
+
+// ════════════════════════════════
 //  MANAGE VIEW
 // ════════════════════════════════
 let manageTab = 'members';
@@ -1073,6 +1249,7 @@ function openStudentModal(id, defCls){
   const s = id ? S.students.find(x=>x.id===id) : null;
   const today = new Date().toISOString().slice(0,10);
   document.getElementById('sName').value    = s?s.name:'';
+  document.getElementById('sDept').value    = s?(s.dept||''):'';
   document.getElementById('sNum').value     = s?(s.num||''):'';
   document.getElementById('sBirth').value   = s?(s.birth||''):'';
   document.getElementById('sPhone').value   = s?(s.phone||''):'';
@@ -1088,16 +1265,17 @@ function saveStudent(){
   const name=document.getElementById('sName').value.trim();
   if(!name){ document.getElementById('sName').focus(); return; }
   const num    = parseInt(document.getElementById('sNum').value)||null;
+  const dept   = document.getElementById('sDept').value;
   const cls    = document.getElementById('sCls').value;
   const birth  = document.getElementById('sBirth').value;
   const phone  = document.getElementById('sPhone').value.trim();
   const regDate= document.getElementById('sRegDate').value;
   if(editingId){
     const s=S.students.find(x=>x.id===editingId);
-    s.name=name; s.num=num; s.cls=cls; s.birth=birth; s.phone=phone; s.regDate=regDate;
+    s.name=name; s.num=num; s.dept=dept; s.cls=cls; s.birth=birth; s.phone=phone; s.regDate=regDate;
     showToast(`✏️ ${name} 수정 완료!`);
   } else {
-    S.students.push({id:S.nextId++, name, num, cls, birth, phone, regDate});
+    S.students.push({id:S.nextId++, name, num, dept, cls, birth, phone, regDate});
     showToast(`🎉 ${name} 추가 완료!`);
   }
   saveToStorage();
@@ -1451,9 +1629,10 @@ function startRealtimeSync(){
     if(data.editPw) EDIT_PW = data.editPw;
     isSyncing = false;
     initDraft();
-    if(currentView==='check')   renderCheck();
-    else if(currentView==='history') renderHistory();
-    else if(currentView==='manage')  renderManage();
+    if(currentView==='check')        renderCheck();
+    else if(currentView==='history')  renderHistory();
+    else if(currentView==='members')  renderMembers();
+    else if(currentView==='manage')   renderManage();
     showSyncStatus('🔄 동기화됨');
   });
 }
@@ -1477,8 +1656,22 @@ document.getElementById('lockPwInput').addEventListener('keydown', e=>{ if(e.key
 // 메인 탭
 document.getElementById('tab-check').addEventListener('click', ()=>setView('check'));
 document.getElementById('tab-history').addEventListener('click', ()=>setView('history'));
+document.getElementById('tab-members').addEventListener('click', ()=>setView('members'));
 document.getElementById('tab-manage').addEventListener('click', requestEditPw);
 document.getElementById('dateChip').addEventListener('click', openCal);
+
+// 정렬 버튼
+document.getElementById('sort-name').addEventListener('click', ()=>setSort('name'));
+document.getElementById('sort-dept').addEventListener('click', ()=>setSort('dept'));
+document.getElementById('sort-family').addEventListener('click', ()=>setSort('family'));
+
+// 멤버 상세 수정 버튼
+document.getElementById('detailEditBtn').addEventListener('click', function(){
+  const id = this._sid;
+  const s = S.students.find(x=>x.id===id);
+  closeMemberDetail();
+  setTimeout(()=>{ openStudentModal(id, s?s.cls:''); }, 200);
+});
 
 // 하단 버튼
 document.getElementById('exportBtn').addEventListener('click', exportCSV);
@@ -1535,7 +1728,7 @@ document.getElementById('confirmOverlay').addEventListener('click', e=>{
 });
 
 // Expose to global scope for inline onclick handlers (동적 렌더링 요소용)
-window.setView=setView; window.openCal=openCal; window.closeCal=closeCal; window.confirmCal=confirmCal;
+window.setView=setView; window.setSort=setSort; window.openMemberDetail=openMemberDetail; window.closeMemberDetail=closeMemberDetail; window.closeMemberDetailOut=closeMemberDetailOut; window.openCal=openCal; window.closeCal=closeCal; window.confirmCal=confirmCal;
 window.calMove=calMove; window.selDay=selDay; window.setHistoryTab=setHistoryTab;
 window.toggle=toggle; window.saveCls=saveCls; window.saveAllClasses=saveAllClasses;
 window.delRecord=delRecord; window.renderManage=renderManage;
