@@ -62,7 +62,7 @@ header {
 /* SUB TABS (inside history) */
 .sub-tabs {
   display:flex; background:var(--card2); border-bottom:1px solid var(--border);
-  position:sticky; top:89px; z-index:90;
+  position:sticky; top:var(--header-h, 89px); z-index:90;
 }
 .sub-tab {
   flex:1; padding:11px; text-align:center; font-size:13px; font-weight:700;
@@ -497,16 +497,20 @@ header {
 
 <!-- MEMBERS VIEW -->
 <div id="view-members" style="display:none">
-  <!-- 정렬 바 -->
-  <div style="padding:12px 16px 0;display:flex;gap:8px;align-items:center">
+  <!-- 정렬 바 (sticky) -->
+  <div id="memberSortBar" style="
+    position:sticky; top:var(--header-h,89px); z-index:90;
+    background:rgba(15,17,23,0.96); backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--border);
+    padding:8px 16px; display:flex; gap:8px; align-items:center;">
     <span style="font-size:12px;color:var(--muted);font-weight:700;white-space:nowrap">정렬</span>
-    <div style="display:flex;gap:6px;flex-wrap:wrap" id="sortBtns">
+    <div style="display:flex;gap:6px;" id="sortBtns">
       <button class="sort-btn active" id="sort-name">이름순</button>
       <button class="sort-btn" id="sort-dept">청년부</button>
       <button class="sort-btn" id="sort-family">가족명</button>
     </div>
   </div>
-  <div class="classes-wrap" id="membersWrap"></div>
+  <div class="classes-wrap" id="membersWrap" style="padding-bottom:80px"></div>
 </div>
 
 <!-- MEMBER DETAIL MODAL -->
@@ -530,7 +534,7 @@ header {
 
 <!-- MANAGE VIEW -->
 <div id="view-manage" style="display:none">
-  <div class="sub-tabs" style="position:sticky;top:89px;z-index:90;">
+  <div class="sub-tabs">
     <div class="sub-tab active" id="subtab-members">👨‍👩‍👧 가족&멤버 편집</div>
     <div class="sub-tab"       id="subtab-settings">⚙ 설정</div>
   </div>
@@ -845,9 +849,7 @@ function renderCheck(){
   // 가족 점프바 렌더
   const jumpBar = document.getElementById('familyJumpBar');
   jumpBar.innerHTML = '';
-  // 헤더 높이 CSS 변수 업데이트
-  const hh = document.querySelector('header').offsetHeight;
-  document.documentElement.style.setProperty('--header-h', hh + 'px');
+
   if(S.classes.length > 1){
     jumpBar.style.display = 'flex';
     S.classes.forEach(cls=>{
@@ -1983,6 +1985,24 @@ function bootApp(){
   document.getElementById('dateChipText').textContent = fmtDate(selectedDate);
   initDraft();
 }
+
+// ── 맨위로 버튼
+const scrollTopBtn = document.getElementById('scrollTopBtn');
+window.addEventListener('scroll', ()=>{
+  if(window.scrollY > 300) scrollTopBtn.classList.add('visible');
+  else scrollTopBtn.classList.remove('visible');
+}, { passive: true });
+scrollTopBtn.addEventListener('click', ()=>{
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+// ── 헤더 높이 CSS 변수 초기화
+function updateHeaderHeight(){
+  const hh = document.querySelector('header').offsetHeight;
+  document.documentElement.style.setProperty('--header-h', hh + 'px');
+}
+updateHeaderHeight();
+window.addEventListener('resize', updateHeaderHeight);
 
 // ── 앱 시작
 document.getElementById('dateChipText').textContent = fmtDate(selectedDate);
