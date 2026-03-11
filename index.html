@@ -316,6 +316,53 @@ header {
 </style>
 </head>
 <body>
+<!-- 앱 잠금 화면 -->
+<div id="lockScreen" style="
+  position:fixed;inset:0;background:#0f1117;z-index:9000;
+  display:flex;align-items:center;justify-content:center;
+  flex-direction:column;gap:24px;padding:32px;
+">
+  <div style="text-align:center">
+    <div style="font-family:'Space Mono',monospace;font-size:28px;color:#4f8cff;letter-spacing:-1px;margin-bottom:8px">출석<span style="color:#a78bfa">CHECK</span></div>
+    <div style="font-size:13px;color:#6b7280">접속하려면 비밀번호를 입력하세요</div>
+  </div>
+  <div style="width:100%;max-width:320px;display:flex;flex-direction:column;gap:12px">
+    <input id="lockPwInput" type="password" placeholder="비밀번호 입력"
+      style="width:100%;background:#1a1d27;border:1.5px solid #2d3148;border-radius:14px;
+             padding:14px 18px;color:#f0f2ff;font-size:16px;font-family:'Noto Sans KR',sans-serif;
+             outline:none;text-align:center;letter-spacing:4px;"
+      onkeydown="if(event.key==='Enter') checkLockPw()">
+    <button onclick="checkLockPw()" style="
+      padding:14px;border-radius:14px;border:none;background:#4f8cff;color:#fff;
+      font-size:15px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;">
+      🔓 입장하기
+    </button>
+    <div id="lockError" style="text-align:center;color:#ef4444;font-size:13px;font-weight:700;opacity:0;transition:opacity .2s">
+      비밀번호가 틀렸어요
+    </div>
+  </div>
+</div>
+
+<!-- 편집 비밀번호 모달 -->
+<div class="overlay" id="editPwOverlay" onclick="closeEditPwOut(event)">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">🔐 편집 비밀번호</div>
+    <div style="font-size:13px;color:#6b7280;margin-bottom:16px">편집 메뉴는 관리자만 접근할 수 있어요</div>
+    <label class="inp-label">비밀번호</label>
+    <input class="inp" id="editPwInput" type="password" placeholder="비밀번호 입력"
+      style="letter-spacing:4px;text-align:center"
+      onkeydown="if(event.key==='Enter') checkEditPw()">
+    <div id="editPwError" style="color:#ef4444;font-size:12px;font-weight:700;margin:-8px 0 12px;opacity:0;transition:opacity .2s">
+      비밀번호가 틀렸어요
+    </div>
+    <div class="row-btns">
+      <button class="btn cancel" onclick="closeEditPwOverlay()">취소</button>
+      <button class="btn primary" onclick="checkEditPw()">확인</button>
+    </div>
+  </div>
+</div>
+
 <div class="app">
 
 <!-- HEADER -->
@@ -330,7 +377,7 @@ header {
   <div class="view-tabs">
     <div class="view-tab active" id="tab-check"   onclick="setView('check')">✅ 출석체크</div>
     <div class="view-tab"        id="tab-history" onclick="setView('history')">📋 기록보기</div>
-    <div class="view-tab"        id="tab-manage"  onclick="setView('manage')">⚙ 가족&멤버 편집</div>
+    <div class="view-tab"        id="tab-manage"  onclick="requestEditPw()">⚙ 편집</div>
   </div>
 </header>
 
@@ -359,7 +406,16 @@ header {
 
 <!-- MANAGE VIEW -->
 <div id="view-manage" style="display:none">
-  <div class="classes-wrap" id="manageWrap"></div>
+  <div class="sub-tabs" style="position:sticky;top:89px;z-index:90;">
+    <div class="sub-tab active" id="subtab-members" onclick="setManageTab('members')">👨‍👩‍👧 가족&멤버 편집</div>
+    <div class="sub-tab"       id="subtab-settings" onclick="setManageTab('settings')">⚙ 설정</div>
+  </div>
+  <div id="manage-members">
+    <div class="classes-wrap" id="manageWrap"></div>
+  </div>
+  <div id="manage-settings" style="display:none">
+    <div class="classes-wrap" id="settingsWrap"></div>
+  </div>
 </div>
 
 </div>
@@ -448,6 +504,44 @@ header {
   </div>
 </div>
 
+<!-- PW CHANGE MODAL -->
+<div class="overlay" id="pwChangeOverlay" onclick="closePwChangeOut(event)">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">🔐 비밀번호 변경</div>
+
+    <div style="background:rgba(79,140,255,0.08);border:1px solid rgba(79,140,255,0.2);
+                border-radius:12px;padding:12px 14px;margin-bottom:16px;font-size:12px;color:#6b7280;line-height:1.7;">
+      변경하지 않을 항목은 비워두세요.<br>비밀번호는 숫자·문자 모두 가능해요.
+    </div>
+
+    <label class="inp-label">현재 편집 비밀번호 확인</label>
+    <input class="inp" id="pwCurEdit" type="password" placeholder="현재 편집 비밀번호">
+    <div id="pwCurError" style="color:#ef4444;font-size:12px;font-weight:700;margin:-8px 0 12px;opacity:0;transition:opacity .2s">
+      현재 편집 비밀번호가 틀렸어요
+    </div>
+
+    <div style="height:1px;background:var(--border);margin-bottom:14px;"></div>
+
+    <label class="inp-label">새 앱 접속 비밀번호</label>
+    <input class="inp" id="pwNewApp" type="password" placeholder="변경 안 하면 비워두세요">
+
+    <label class="inp-label">새 편집 비밀번호</label>
+    <input class="inp" id="pwNewEdit" type="password" placeholder="변경 안 하면 비워두세요">
+
+    <label class="inp-label">새 편집 비밀번호 확인</label>
+    <input class="inp" id="pwNewEditConfirm" type="password" placeholder="새 편집 비밀번호 다시 입력">
+    <div id="pwMatchError" style="color:#ef4444;font-size:12px;font-weight:700;margin:-8px 0 12px;opacity:0;transition:opacity .2s">
+      편집 비밀번호가 일치하지 않아요
+    </div>
+
+    <div class="row-btns">
+      <button class="btn cancel" onclick="closePwChangeModal()">취소</button>
+      <button class="btn primary" onclick="savePwChange()">저장</button>
+    </div>
+  </div>
+</div>
+
 <!-- EDIT CLASS MODAL -->
 <div class="overlay" id="editClassOverlay" onclick="closeEditClassOut(event)">
   <div class="sheet">
@@ -528,7 +622,7 @@ function setView(v){
     renderHistory();
   } else {
     nav.style.display='none';
-    renderManage();
+    setManageTab(manageTab);
   }
 }
 
@@ -763,11 +857,59 @@ function renderStats(){
 // ════════════════════════════════
 //  MANAGE VIEW
 // ════════════════════════════════
+let manageTab = 'members';
+
+function setManageTab(tab){
+  manageTab = tab;
+  ['members','settings'].forEach(t=>{
+    document.getElementById('subtab-'+t).classList.toggle('active', t===tab);
+    document.getElementById('manage-'+t).style.display = t===tab ? '' : 'none';
+  });
+  if(tab==='members') renderManage();
+  else renderSettings();
+}
+
+function renderSettings(){
+  const wrap = document.getElementById('settingsWrap');
+  wrap.innerHTML = '';
+
+  // 비밀번호 카드
+  const pwCard = document.createElement('div');
+  pwCard.style.cssText='background:var(--card);border:1.5px solid var(--border);border-radius:18px;overflow:hidden;';
+  pwCard.innerHTML=`
+    <div style="padding:14px 16px;background:var(--card2);border-bottom:1px solid var(--border);
+                display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="font-size:14px;font-weight:900;">🔐 비밀번호 설정</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:3px">앱 접속 · 편집 비밀번호 변경</div>
+      </div>
+      <button class="sm-btn edit" onclick="openPwChangeModal()">변경</button>
+    </div>
+    <div style="padding:12px 16px;display:flex;gap:8px;">
+      <div style="flex:1;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;text-align:center;">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:4px;">앱 접속</div>
+        <div style="font-size:18px;letter-spacing:4px;font-weight:900" id="displayAppPw">••••</div>
+      </div>
+      <div style="flex:1;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;text-align:center;">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:4px;">편집</div>
+        <div style="font-size:18px;letter-spacing:4px;font-weight:900" id="displayEditPw">••••</div>
+      </div>
+      <button onclick="toggleShowPw()" id="showPwBtn" style="
+        padding:8px 12px;border-radius:10px;border:1.5px solid var(--border);
+        background:var(--card2);color:var(--muted);font-size:12px;font-weight:700;
+        cursor:pointer;font-family:inherit;white-space:nowrap;align-self:center;">
+        👁 보기
+      </button>
+    </div>
+  `;
+  wrap.appendChild(pwCard);
+}
+
 function renderManage(){
   const wrap = document.getElementById('manageWrap');
   wrap.innerHTML='';
 
-  // Add class button
+  // 가족 추가 버튼
   const addRow = document.createElement('button');
   addRow.className='nav-btn primary';
   addRow.style.cssText='width:100%;border-radius:14px;padding:13px;margin-bottom:4px';
@@ -785,7 +927,8 @@ function renderManage(){
         <div class="manage-class-name">${cls} <span style="color:var(--muted);font-weight:400;font-size:12px">${students.length}명</span></div>
         <div class="header-actions">
           <button class="icon-btn add" onclick="openStudentModal(null,'${cls}')" title="멤버 추가">＋</button>
-          <button class="icon-btn del2" onclick="delClass('${cls}')" title="반 삭제">🗑</button>
+          <button class="icon-btn" style="border-color:rgba(167,139,250,.3);color:var(--accent2)" onclick="openEditClassModal('${cls}')" title="가족 이름 수정">✏️</button>
+          <button class="icon-btn del2" onclick="delClass('${cls}')" title="가족 삭제">🗑</button>
         </div>
       </div>
       ${!students.length
@@ -1013,6 +1156,124 @@ function showToast(msg){
 //  INIT
 // ════════════════════════════════
 // ════════════════════════════════
+//  PASSWORD
+// ════════════════════════════════
+let APP_PW  = '1234';   // ← 앱 접속 비밀번호
+let EDIT_PW = '0000';   // ← 편집 비밀번호
+
+let appUnlocked  = false;
+let editUnlocked = false;
+
+function checkLockPw(){
+  const val = document.getElementById('lockPwInput').value;
+  if(val === APP_PW){
+    appUnlocked = true;
+    document.getElementById('lockScreen').style.display = 'none';
+    document.getElementById('lockPwInput').value = '';
+  } else {
+    const err = document.getElementById('lockError');
+    err.style.opacity = '1';
+    document.getElementById('lockPwInput').value = '';
+    document.getElementById('lockPwInput').focus();
+    setTimeout(()=> err.style.opacity='0', 2000);
+  }
+}
+
+function requestEditPw(){
+  if(editUnlocked){ setView('manage'); return; }
+  document.getElementById('editPwInput').value = '';
+  document.getElementById('editPwError').style.opacity = '0';
+  document.getElementById('editPwOverlay').classList.add('open');
+  setTimeout(()=> document.getElementById('editPwInput').focus(), 300);
+}
+
+function checkEditPw(){
+  const val = document.getElementById('editPwInput').value;
+  if(val === EDIT_PW){
+    editUnlocked = true;
+    closeEditPwOverlay();
+    setView('manage');
+  } else {
+    const err = document.getElementById('editPwError');
+    err.style.opacity = '1';
+    document.getElementById('editPwInput').value = '';
+    document.getElementById('editPwInput').focus();
+    setTimeout(()=> err.style.opacity='0', 2000);
+  }
+}
+
+function closeEditPwOverlay(){
+  document.getElementById('editPwOverlay').classList.remove('open');
+}
+function closeEditPwOut(e){
+  if(e.target === document.getElementById('editPwOverlay')) closeEditPwOverlay();
+}
+
+// 비밀번호 보기/숨기기
+let pwVisible = false;
+function toggleShowPw(){
+  pwVisible = !pwVisible;
+  document.getElementById('displayAppPw').textContent  = pwVisible ? APP_PW  : '••••';
+  document.getElementById('displayEditPw').textContent = pwVisible ? EDIT_PW : '••••';
+  document.getElementById('showPwBtn').textContent = pwVisible ? '🙈 숨기기' : '👁 보기';
+}
+
+// 비밀번호 변경 모달
+function openPwChangeModal(){
+  ['pwCurEdit','pwNewApp','pwNewEdit','pwNewEditConfirm'].forEach(id=>{
+    document.getElementById(id).value='';
+  });
+  document.getElementById('pwCurError').style.opacity='0';
+  document.getElementById('pwMatchError').style.opacity='0';
+  document.getElementById('pwChangeOverlay').classList.add('open');
+  setTimeout(()=>document.getElementById('pwCurEdit').focus(),300);
+}
+function closePwChangeModal(){
+  document.getElementById('pwChangeOverlay').classList.remove('open');
+}
+function closePwChangeOut(e){
+  if(e.target===document.getElementById('pwChangeOverlay')) closePwChangeModal();
+}
+function savePwChange(){
+  const curEdit        = document.getElementById('pwCurEdit').value;
+  const newApp         = document.getElementById('pwNewApp').value;
+  const newEdit        = document.getElementById('pwNewEdit').value;
+  const newEditConfirm = document.getElementById('pwNewEditConfirm').value;
+
+  // 현재 편집 비밀번호 확인
+  if(curEdit !== EDIT_PW){
+    const err = document.getElementById('pwCurError');
+    err.style.opacity='1';
+    setTimeout(()=>err.style.opacity='0',2500);
+    document.getElementById('pwCurEdit').value='';
+    document.getElementById('pwCurEdit').focus();
+    return;
+  }
+
+  // 새 편집 비밀번호 일치 확인
+  if(newEdit && newEdit !== newEditConfirm){
+    const err = document.getElementById('pwMatchError');
+    err.style.opacity='1';
+    setTimeout(()=>err.style.opacity='0',2500);
+    document.getElementById('pwNewEditConfirm').value='';
+    document.getElementById('pwNewEditConfirm').focus();
+    return;
+  }
+
+  // 변경 적용
+  if(newApp)  APP_PW  = newApp;
+  if(newEdit) EDIT_PW = newEdit;
+
+  // Firebase에 비밀번호 저장
+  saveToStorage();
+
+  closePwChangeModal();
+  pwVisible = false;
+  renderManage();
+  showToast('🔐 비밀번호 변경 완료!');
+}
+
+// ════════════════════════════════
 //  FIREBASE
 // ════════════════════════════════
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -1040,7 +1301,9 @@ function saveToStorage(){
     classes:  S.classes,
     students: S.students,
     records:  S.records,
-    nextId:   S.nextId
+    nextId:   S.nextId,
+    appPw:    APP_PW,
+    editPw:   EDIT_PW
   };
   set(ref(db, ROOT), data)
     .then(()=> showSyncStatus('✅ 저장됨'))
@@ -1064,6 +1327,8 @@ function startRealtimeSync(){
     S.students = data.students || [];
     S.records  = data.records  || {};
     S.nextId   = data.nextId   || S.nextId;
+    if(data.appPw)  APP_PW  = data.appPw;
+    if(data.editPw) EDIT_PW = data.editPw;
     isSyncing = false;
     initDraft();
     if(currentView==='check')   renderCheck();
@@ -1095,7 +1360,9 @@ window.openClassModal=openClassModal; window.closeClassModal=closeClassModal; wi
 window.delClass=delClass; window.delStudent=delStudent; window.exportCSV=exportCSV;
 window.closeStudentOut=closeStudentOut; window.closeClassOut=closeClassOut; window.closeCalOut=closeCalOut;
 window.doDownloadCSV=doDownloadCSV; window.doCopyCSV=doCopyCSV;
-window.openEditClassModal=openEditClassModal; window.closeEditClassModal=closeEditClassModal; window.saveEditClass=saveEditClass; window.closeEditClassOut=closeEditClassOut;
+window.openEditClassModal=openEditClassModal; window.setManageTab=setManageTab; window.renderSettings=renderSettings; window.closeEditClassModal=closeEditClassModal; window.saveEditClass=saveEditClass; window.closeEditClassOut=closeEditClassOut;
+window.checkLockPw=checkLockPw; window.requestEditPw=requestEditPw; window.checkEditPw=checkEditPw; window.closeEditPwOverlay=closeEditPwOverlay; window.closeEditPwOut=closeEditPwOut;
+window.openPwChangeModal=openPwChangeModal; window.closePwChangeModal=closePwChangeModal; window.closePwChangeOut=closePwChangeOut; window.savePwChange=savePwChange; window.toggleShowPw=toggleShowPw;
 </script>
 </body>
 </html>
