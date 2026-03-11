@@ -244,7 +244,7 @@ header {
 /* FAMILY JUMP BAR */
 .family-jump-bar {
   position: sticky;
-  top: 89px;
+  top: var(--header-h, 89px);
   z-index: 90;
   background: rgba(15,17,23,0.96);
   backdrop-filter: blur(12px);
@@ -845,6 +845,9 @@ function renderCheck(){
   // 가족 점프바 렌더
   const jumpBar = document.getElementById('familyJumpBar');
   jumpBar.innerHTML = '';
+  // 헤더 높이 CSS 변수 업데이트
+  const hh = document.querySelector('header').offsetHeight;
+  document.documentElement.style.setProperty('--header-h', hh + 'px');
   if(S.classes.length > 1){
     jumpBar.style.display = 'flex';
     S.classes.forEach(cls=>{
@@ -854,9 +857,10 @@ function renderCheck(){
       btn.addEventListener('click', ()=>{
         const target = document.getElementById('cls-section-' + cls.replace(/[^a-zA-Z0-9가-힣]/g,'_'));
         if(target){
-          const headerH = document.querySelector('header').offsetHeight;
+          const headerH  = document.querySelector('header').offsetHeight;
           const jumpBarH = jumpBar.offsetHeight;
-          const top = target.getBoundingClientRect().top + window.scrollY - headerH - jumpBarH - 8;
+          const offset   = headerH + jumpBarH + 12;
+          const top = target.getBoundingClientRect().top + window.scrollY - offset;
           window.scrollTo({ top, behavior: 'smooth' });
         }
       });
