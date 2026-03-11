@@ -912,35 +912,45 @@ function renderSettings(){
   const wrap = document.getElementById('settingsWrap');
   wrap.innerHTML = '';
 
-  // 비밀번호 카드
+  // 비밀번호 카드 — DOM으로 직접 생성해서 addEventListener 사용
   const pwCard = document.createElement('div');
   pwCard.style.cssText='background:var(--card);border:1.5px solid var(--border);border-radius:18px;overflow:hidden;';
-  pwCard.innerHTML=`
-    <div style="padding:14px 16px;background:var(--card2);border-bottom:1px solid var(--border);
-                display:flex;align-items:center;justify-content:space-between;">
-      <div>
-        <div style="font-size:14px;font-weight:900;">🔐 비밀번호 설정</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:3px">앱 접속 · 편집 비밀번호 변경</div>
-      </div>
-      <button class="sm-btn edit" onclick="openPwChangeModal()">변경</button>
+
+  // 헤더
+  const pwHeader = document.createElement('div');
+  pwHeader.style.cssText='padding:14px 16px;background:var(--card2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;';
+  pwHeader.innerHTML=`
+    <div>
+      <div style="font-size:14px;font-weight:900;">🔐 비밀번호 설정</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:3px">앱 접속 · 편집 비밀번호 변경</div>
+    </div>`;
+  const pwChangeBtn = document.createElement('button');
+  pwChangeBtn.className='sm-btn edit';
+  pwChangeBtn.textContent='변경';
+  pwChangeBtn.addEventListener('click', openPwChangeModal);
+  pwHeader.appendChild(pwChangeBtn);
+  pwCard.appendChild(pwHeader);
+
+  // 비밀번호 표시 영역
+  const pwBody = document.createElement('div');
+  pwBody.style.cssText='padding:12px 16px;display:flex;gap:8px;';
+  pwBody.innerHTML=`
+    <div style="flex:1;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;text-align:center;">
+      <div style="font-size:10px;color:var(--muted);margin-bottom:4px;">앱 접속</div>
+      <div style="font-size:18px;letter-spacing:4px;font-weight:900" id="displayAppPw">••••</div>
     </div>
-    <div style="padding:12px 16px;display:flex;gap:8px;">
-      <div style="flex:1;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;text-align:center;">
-        <div style="font-size:10px;color:var(--muted);margin-bottom:4px;">앱 접속</div>
-        <div style="font-size:18px;letter-spacing:4px;font-weight:900" id="displayAppPw">••••</div>
-      </div>
-      <div style="flex:1;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;text-align:center;">
-        <div style="font-size:10px;color:var(--muted);margin-bottom:4px;">편집</div>
-        <div style="font-size:18px;letter-spacing:4px;font-weight:900" id="displayEditPw">••••</div>
-      </div>
-      <button onclick="toggleShowPw()" id="showPwBtn" style="
-        padding:8px 12px;border-radius:10px;border:1.5px solid var(--border);
-        background:var(--card2);color:var(--muted);font-size:12px;font-weight:700;
-        cursor:pointer;font-family:inherit;white-space:nowrap;align-self:center;">
-        👁 보기
-      </button>
-    </div>
-  `;
+    <div style="flex:1;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;text-align:center;">
+      <div style="font-size:10px;color:var(--muted);margin-bottom:4px;">편집</div>
+      <div style="font-size:18px;letter-spacing:4px;font-weight:900" id="displayEditPw">••••</div>
+    </div>`;
+  const showPwBtn = document.createElement('button');
+  showPwBtn.id='showPwBtn';
+  showPwBtn.style.cssText='padding:8px 12px;border-radius:10px;border:1.5px solid var(--border);background:var(--card2);color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;align-self:center;';
+  showPwBtn.textContent='👁 보기';
+  showPwBtn.addEventListener('click', toggleShowPw);
+  pwBody.appendChild(showPwBtn);
+  pwCard.appendChild(pwBody);
+
   wrap.appendChild(pwCard);
 }
 
