@@ -358,6 +358,11 @@ header {
     <div id="lockLoadingMsg" style="font-size:12px;color:var(--muted);text-align:center;padding:4px 0">
       🔄 서버 연결 중...
     </div>
+    <div id="offlineMsg" style="display:none;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);
+      border-radius:12px;padding:12px 14px;font-size:13px;color:#ef4444;text-align:center;line-height:1.7;">
+      📡 인터넷 연결을 확인해주세요<br>
+      <span style="font-size:11px;color:#6b7280">온라인 상태에서만 사용 가능해요</span>
+    </div>
     <input id="lockPwInput" type="password" placeholder="잠시만 기다려주세요"
       disabled
       style="width:100%;background:#1a1d27;border:1.5px solid #2d3148;border-radius:14px;
@@ -1822,10 +1827,60 @@ function showSyncStatus(msg){
 }
 
 // 실시간 동기화 — DB 변경 시 자동 반영
+function unlockInput(){
+  const inp = document.getElementById('lockPwInput');
+  inp.disabled = false;
+  inp.placeholder = '비밀번호 입력';
+  inp.style.opacity = '1';
+  document.getElementById('lockBtn').disabled = false;
+  document.getElementById('lockBtn').style.opacity = '1';
+  document.getElementById('lockLoadingMsg').style.display = 'none';
+  document.getElementById('offlineMsg').style.display = 'none';
+  setTimeout(()=>inp.focus(), 100);
+}
+
+function showOffline(){
+  document.getElementById('lockLoadingMsg').style.display = 'none';
+  document.getElementById('offlineMsg').style.display = 'block';
+  // 5초마다 재시도 안내
+  document.getElementById('offlineMsg').innerHTML =
+    '📡 인터넷 연결을 확인해주세요<br>' +
+    '<span style="font-size:11px;color:#6b7280">온라인 상태에서만 사용 가능해요</span><br>' +
+    '<button onclick="location.reload()" style="margin-top:8px;padding:6px 16px;border-radius:8px;border:none;' +
+    'background:#ef4444;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">🔄 다시 시도</button>';
+}
+
 function startRealtimeSync(){
+  let firstLoad = true;
+
+  // 오프라인 감지: 10초 내 응답 없으면 오프라인 안내
+  const offlineTimer = setTimeout(()=>{
+    if(firstLoad){ showOffline(); }
+  }, 10000);
+
+  // 브라우저 오프라인 이벤트
+  window.addEventListener('offline', ()=>{
+    if(!appUnlocked) showOffline();
+    else showToast('📡 인터넷 연결이 끊겼어요');
+  });
+  window.addEventListener('online', ()=>{
+    if(!appUnlocked){
+      document.getElementById('offlineMsg').style.display = 'none';
+      document.getElementById('lockLoadingMsg').style.display = 'block';
+      document.getElementById('lockLoadingMsg').textContent = '🔄 서버 연결 중...';
+      document.getElementById('lockLoadingMsg').style.color = 'var(--muted)';
+    } else {
+      showToast('✅ 인터넷 연결 복구됨');
+    }
+  });
+
   onValue(ref(db, ROOT), (snapshot)=>{
+    if(firstLoad){
+      firstLoad = false;
+      clearTimeout(offlineTimer);
+    }
     const data = snapshot.val();
-    if(!data) { bootApp(); return; }
+    if(!data){ unlockInput(); bootApp(); return; }
     isSyncing = true;
     S.classes  = data.classes  || S.classes;
     S.students = data.students || [];
@@ -1834,16 +1889,9 @@ function startRealtimeSync(){
     if(data.appPw)  APP_PW  = data.appPw;
     if(data.editPw) EDIT_PW = data.editPw;
     isSyncing = false;
-    // 잠금화면이 떠있으면: 비밀번호 로드 완료 후 입력 활성화
     const lockScreen = document.getElementById('lockScreen');
     if(lockScreen && lockScreen.style.display !== 'none'){
-      const inp = document.getElementById('lockPwInput');
-      const loadingMsg = document.getElementById('lockLoadingMsg');
-      inp.disabled = false;
-      inp.placeholder = '비밀번호 입력';
-      inp.focus();
-      document.getElementById('lockBtn').disabled = false;
-      if(loadingMsg) loadingMsg.style.display = 'none';
+      unlockInput();
     }
     initDraft();
     if(currentView==='check')        renderCheck();
