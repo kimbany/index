@@ -422,6 +422,19 @@ header {
   </div>
   <!-- Log -->
   <div id="history-log">
+    <!-- 필터 바 -->
+    <div style="padding:12px 16px 4px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <div style="display:flex;gap:6px">
+        <button class="sort-btn active" id="hlog-all">전체 보기</button>
+        <button class="sort-btn" id="hlog-date">날짜 선택</button>
+      </div>
+      <select id="hlogDateSel" style="
+        display:none;flex:1;min-width:120px;
+        background:var(--card2);border:1.5px solid var(--border);border-radius:10px;
+        padding:6px 10px;color:var(--text);font-size:13px;font-weight:700;
+        font-family:'Noto Sans KR',sans-serif;outline:none;
+      "></select>
+    </div>
     <div class="history-wrap" id="historyWrap"></div>
     <div style="padding:0 16px 16px">
       <button class="nav-btn secondary" id="exportCsvBtn" style="width:100%;border-radius:14px;padding:13px">📊 CSV로 내보내기</button>
@@ -853,14 +866,97 @@ function renderHistory(){
   setHistoryTab(historyTab);
 }
 
+let historyLogMode = 'all'; // 'all' | 'date'
+let historyLogDate = '';
+
+function setHistoryLogMode(mode){
+  historyLogMode = mode;
+  ['all','date'].forEach(m=>{
+    document.getElementById('hlog-'+m).classList.toggle('active', m===mode);
+  });
+  const sel = document.getElementById('hlogDateSel');
+  if(mode==='date'){
+    // 날짜 목록 채우기
+    const keys = Object.keys(S.records).sort().reverse();
+    const w = ['일','월','화','수','목','금','토'];
+    sel.innerHTML = keys.map(k=>{
+      const [y,m,d] = k.split('-');
+      const dateObj = new Date(+y,+m-1,+d);
+      const label = `${+m}월 ${+d}일 (${w[dateObj.getDay()]})`;
+      return `<option value="${k}">${label}</option>`;
+    }).join('');
+    if(!historyLogDate || !S.records[historyLogDate])
+      historyLogDate = keys[0] || '';
+    sel.value = historyLogDate;
+    sel.style.display = 'block';
+  } else {
+    sel.style.display = 'none';
+    historyLogDate = '';
+  }
+  renderHistoryLog();
+}
+
 function renderHistoryLog(){
   const wrap = document.getElementById('historyWrap');
-  const keys = Object.keys(S.records).sort().reverse();
-  if(!keys.length){
+  const allKeys = Object.keys(S.records).sort().reverse();
+
+  if(!allKeys.length){
     wrap.innerHTML='<div class="empty">저장된 출석 기록이 없어요<br>출석체크 탭에서 저장해보세요 📋</div>';
     return;
   }
-  wrap.innerHTML = keys.map(key=>{
+
+  // 날짜 선택 모드
+  if(historyLogMode==='date'){
+    const key = historyLogDate || allKeys[0];
+    const rec = S.records[key];
+    if(!rec){ wrap.innerHTML='<div class="empty">해당 날짜의 기록이 없어요</div>'; return; }
+
+    const [y,m,d] = key.split('-');
+    const dateObj = new Date(+y,+m-1,+d);
+    const w = ['일','월','화','수','목','금','토'];
+    const dateStr = `${+m}월 ${+d}일 (${w[dateObj.getDay()]})`;
+
+    // 출석한 멤버만 모아서 표시
+    const presentStudents = [];
+    Object.entries(rec).forEach(([cls,ids])=>{
+      ids.forEach(id=>{
+        const s = S.students.find(x=>x.id===id);
+        if(s) presentStudents.push({...s, cls});
+      });
+    });
+    presentStudents.sort((a,b)=>(a.num||99)-(b.num||99));
+
+    const totalA = Object.keys(rec).reduce((a,cls)=>a+S.students.filter(s=>s.cls===cls).length,0);
+
+    wrap.innerHTML = `
+      <div class="history-card">
+        <div class="history-date-header">
+          <div>
+            <div class="history-date">${dateStr}</div>
+            <div class="history-summary">출석 ${presentStudents.length}/${totalA}명</div>
+          </div>
+          <button class="del-rec-btn" onclick="delRecord('${key}')">🗑</button>
+        </div>
+        <div class="history-class-block">
+          <div class="history-class-name">✅ 출석한 멤버</div>
+          <div class="history-students">
+            ${presentStudents.length
+              ? presentStudents.map(s=>{
+                  const r=roleLabel(s.num);
+                  return `<span class="history-chip">
+                    <span style="font-size:10px;opacity:0.7">${r.text}</span> ${s.name}
+                    <span style="font-size:10px;color:var(--muted)"> · ${s.cls}</span>
+                  </span>`;}).join('')
+              : '<span style="color:var(--muted);font-size:13px">출석한 멤버가 없어요</span>'
+            }
+          </div>
+        </div>
+      </div>`;
+    return;
+  }
+
+  // 전체 보기 모드
+  wrap.innerHTML = allKeys.map(key=>{
     const rec = S.records[key];
     const [y,m,d] = key.split('-');
     const dateObj = new Date(+y,+m-1,+d);
@@ -1659,6 +1755,14 @@ document.getElementById('tab-history').addEventListener('click', ()=>setView('hi
 document.getElementById('tab-members').addEventListener('click', ()=>setView('members'));
 document.getElementById('tab-manage').addEventListener('click', requestEditPw);
 document.getElementById('dateChip').addEventListener('click', openCal);
+
+// 기록 필터 버튼
+document.getElementById('hlog-all').addEventListener('click', ()=>setHistoryLogMode('all'));
+document.getElementById('hlog-date').addEventListener('click', ()=>setHistoryLogMode('date'));
+document.getElementById('hlogDateSel').addEventListener('change', function(){
+  historyLogDate = this.value;
+  renderHistoryLog();
+});
 
 // 정렬 버튼
 document.getElementById('sort-name').addEventListener('click', ()=>setSort('name'));
