@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>출석체크</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0f1117;
+  --card: #1a1d27;
+  --card2: #22263a;
+  --accent: #4f8cff;
+  --accent2: #a78bfa;
+  --present: #22c55e;
+  --text: #f0f2ff;
+  --muted: #6b7280;
+  --border: #2d3148;
+  --danger: #ef4444;
+}
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+body {
+  font-family:'Noto Sans KR',sans-serif;
+  background:var(--bg); color:var(--text);
+  min-height:100vh; max-width:480px; margin:0 auto;
+  position:relative; overflow-x:hidden;
+}
+body::before {
+  content:''; position:fixed; inset:0;
+  background-image: linear-gradient(var(--border) 1px,transparent 1px), linear-gradient(90deg,var(--border) 1px,transparent 1px);
+  background-size:40px 40px; opacity:0.18; pointer-events:none; z-index:0;
+}
+.app { position:relative; z-index:1; padding-bottom:90px; }
+
+/* HEADER */
+header {
+  padding:18px 18px 0;
+  position:sticky; top:0;
+  background:rgba(15,17,23,0.94);
+  backdrop-filter:blur(16px);
+  z-index:100; border-bottom:1px solid var(--border);
+}
+.header-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+.logo { font-family:'Space Mono',monospace; font-size:17px; color:var(--accent); letter-spacing:-1px; }
+.logo span { color:var(--accent2); }
+.header-right { display:flex; gap:8px; align-items:center; }
+.date-chip {
+  background:var(--card2); border:1px solid var(--border); border-radius:20px;
+  padding:6px 12px; font-size:12px; color:var(--text); font-weight:700;
+  cursor:pointer; transition:all .15s; display:flex; align-items:center; gap:5px;
+}
+.date-chip:active { background:var(--accent); border-color:var(--accent); }
+
+/* VIEW TABS */
+.view-tabs { display:flex; gap:0; }
+.view-tab {
+  flex:1; padding:10px 4px; text-align:center; font-size:12px; font-weight:700;
+  color:var(--muted); border-bottom:2px solid transparent; cursor:pointer; transition:all .15s;
+}
+.view-tab.active { color:var(--accent); border-bottom-color:var(--accent); }
+
+/* SUB TABS (inside history) */
+.sub-tabs {
+  display:flex; background:var(--card2); border-bottom:1px solid var(--border);
+  position:sticky; top:89px; z-index:90;
+}
+.sub-tab {
+  flex:1; padding:11px; text-align:center; font-size:13px; font-weight:700;
+  color:var(--muted); cursor:pointer; transition:all .15s;
+  border-bottom:2px solid transparent;
+}
+.sub-tab.active { color:var(--accent2); border-bottom-color:var(--accent2); }
+
+/* STATS */
+.stats-section {
+  background:var(--card); border:1.5px solid var(--border); border-radius:18px; overflow:hidden;
+  animation:slideIn .25s ease both;
+}
+.stats-cls-header {
+  padding:12px 16px; background:var(--card2); border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between;
+}
+.stats-cls-name { font-size:14px; font-weight:900; }
+.stats-cls-meta { font-size:11px; color:var(--muted); }
+.stat-row {
+  display:flex; align-items:center; gap:12px;
+  padding:11px 16px; border-bottom:1px solid rgba(45,49,72,0.5);
+}
+.stat-row:last-child { border-bottom:none; }
+.stat-rank {
+  font-family:'Space Mono',monospace; font-size:12px; color:var(--muted);
+  width:20px; text-align:center; flex-shrink:0;
+}
+.stat-bar-wrap { flex:1; }
+.stat-name-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; }
+.stat-name { font-size:13px; font-weight:700; }
+.stat-pct  { font-family:'Space Mono',monospace; font-size:13px; font-weight:700; }
+.stat-bar-track {
+  height:6px; background:var(--card2); border-radius:99px; overflow:hidden;
+}
+.stat-bar-fill {
+  height:100%; border-radius:99px;
+  transition:width .6s cubic-bezier(.34,1.2,.64,1);
+}
+.stat-count { font-size:11px; color:var(--muted); margin-top:3px; }
+
+/* CLASSES WRAP */
+.classes-wrap { padding:16px 16px; display:flex; flex-direction:column; gap:16px; }
+
+/* CLASS SECTION */
+.class-section {
+  background:var(--card); border:1.5px solid var(--border); border-radius:18px; overflow:hidden;
+  animation:slideIn .25s ease both;
+}
+.class-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 16px; background:var(--card2); border-bottom:1px solid var(--border);
+}
+.class-name { font-size:15px; font-weight:900; }
+.class-meta { font-size:11px; color:var(--muted); margin-top:3px; }
+.save-btn {
+  background:var(--accent); color:#fff; border:none; border-radius:10px;
+  padding:8px 14px; font-size:12px; font-weight:700; cursor:pointer;
+  font-family:'Noto Sans KR',sans-serif; transition:all .15s; white-space:nowrap;
+}
+.save-btn:active { transform:scale(0.93); }
+.save-btn:hover { opacity:.88; }
+
+/* STUDENT ROWS */
+.student-rows { padding:4px 0; }
+.student-row {
+  display:flex; align-items:center; gap:12px;
+  padding:11px 16px; border-bottom:1px solid rgba(45,49,72,0.5);
+  transition:background .15s; cursor:pointer;
+}
+.student-row:last-child { border-bottom:none; }
+.student-row:active { background:rgba(79,140,255,0.05); }
+.student-row.checked { background:rgba(34,197,94,0.07); }
+
+.s-avatar {
+  width:36px; height:36px; border-radius:10px;
+  background:var(--card2); border:1.5px solid var(--border);
+  display:flex; align-items:center; justify-content:center;
+  font-size:16px; flex-shrink:0; transition:all .2s;
+}
+.student-row.checked .s-avatar { background:rgba(34,197,94,0.2); border-color:var(--present); }
+
+.s-info { flex:1; }
+.s-name { font-size:14px; font-weight:700; }
+.s-num  { font-size:11px; color:var(--muted); margin-top:1px; }
+
+.checkbox {
+  width:30px; height:30px; border-radius:9px;
+  border:2px solid var(--border); background:var(--card2);
+  display:flex; align-items:center; justify-content:center;
+  font-size:15px; font-weight:900; transition:all .18s; flex-shrink:0; color:#fff;
+}
+.checkbox.on { background:var(--present); border-color:var(--present); box-shadow:0 0 12px rgba(34,197,94,0.4); }
+
+/* HISTORY */
+.history-wrap { padding:16px; display:flex; flex-direction:column; gap:12px; }
+.history-card {
+  background:var(--card); border:1.5px solid var(--border); border-radius:16px; overflow:hidden;
+  animation:slideIn .25s ease both;
+}
+.history-date-header {
+  padding:12px 16px; background:var(--card2); border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between;
+}
+.history-date { font-family:'Space Mono',monospace; font-size:13px; color:var(--accent); font-weight:700; }
+.history-summary { font-size:11px; color:var(--muted); margin-top:2px; }
+.history-class-block { padding:12px 16px; border-bottom:1px solid rgba(45,49,72,0.4); }
+.history-class-block:last-child { border-bottom:none; }
+.history-class-name { font-size:11px; font-weight:700; color:var(--muted); margin-bottom:8px; letter-spacing:.5px; }
+.history-students { display:flex; flex-wrap:wrap; gap:6px; }
+.history-chip {
+  padding:4px 10px; border-radius:20px; font-size:12px; font-weight:700;
+  background:rgba(34,197,94,0.15); border:1px solid rgba(34,197,94,0.3); color:var(--present);
+}
+.history-chip.absent { background:rgba(107,114,128,0.12); border-color:rgba(107,114,128,0.25); color:var(--muted); }
+.del-rec-btn { background:transparent; border:none; color:var(--muted); font-size:18px; cursor:pointer; padding:2px 6px; }
+
+/* MANAGE */
+.manage-section {
+  background:var(--card); border:1.5px solid var(--border); border-radius:18px; overflow:hidden;
+  animation:slideIn .2s ease both;
+}
+.manage-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:12px 16px; background:var(--card2); border-bottom:1px solid var(--border);
+}
+.manage-class-name { font-size:14px; font-weight:900; }
+.header-actions { display:flex; gap:6px; }
+.icon-btn {
+  width:32px; height:32px; border-radius:8px; border:1.5px solid var(--border);
+  background:transparent; font-size:15px;
+  display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all .15s;
+}
+.icon-btn.add { border-color:rgba(79,140,255,.4); color:var(--accent); }
+.icon-btn.add:active { background:var(--accent); color:#fff; }
+.icon-btn.del2 { border-color:rgba(239,68,68,.3); color:var(--danger); }
+.icon-btn.del2:active { background:var(--danger); color:#fff; }
+
+.manage-row {
+  display:flex; align-items:center; gap:10px;
+  padding:10px 16px; border-bottom:1px solid rgba(45,49,72,0.5);
+}
+.manage-row:last-child { border-bottom:none; }
+.m-num  { font-size:12px; color:var(--muted); width:24px; text-align:center; flex-shrink:0; }
+.m-name { flex:1; font-size:14px; font-weight:700; }
+.sm-btn {
+  padding:5px 11px; border-radius:8px; border:1.5px solid var(--border);
+  background:var(--card2); font-size:12px; font-weight:700; cursor:pointer;
+  font-family:'Noto Sans KR',sans-serif; transition:all .15s;
+}
+.sm-btn.edit { color:var(--accent2); border-color:rgba(167,139,250,.3); }
+.sm-btn.edit:active { background:var(--accent2); color:#fff; }
+.sm-btn.del  { color:var(--danger); border-color:rgba(239,68,68,.3); }
+.sm-btn.del:active  { background:var(--danger); color:#fff; }
+
+.role-badge {
+  padding:3px 9px; border-radius:20px; font-size:11px; font-weight:700;
+  white-space:nowrap; flex-shrink:0;
+}
+
+/* BOTTOM NAV */
+.bottom-nav {
+  position:fixed; bottom:0; left:50%; transform:translateX(-50%);
+  width:100%; max-width:480px;
+  background:rgba(15,17,23,0.96); backdrop-filter:blur(20px);
+  border-top:1px solid var(--border);
+  padding:10px 16px 22px; display:flex; gap:10px; z-index:200;
+}
+.nav-btn {
+  flex:1; padding:13px; border-radius:14px; border:none;
+  font-size:13px; font-weight:700; cursor:pointer;
+  font-family:'Noto Sans KR',sans-serif; transition:all .18s;
+  display:flex; align-items:center; justify-content:center; gap:5px;
+}
+.nav-btn:active { transform:scale(0.95); }
+.nav-btn.primary  { background:var(--accent); color:#fff; box-shadow:0 4px 20px rgba(79,140,255,.3); }
+.nav-btn.secondary{ background:var(--card2); color:var(--text); border:1.5px solid var(--border); }
+
+/* MODALS */
+.overlay {
+  position:fixed; inset:0; background:rgba(0,0,0,.78); backdrop-filter:blur(6px);
+  z-index:300; display:flex; align-items:flex-end;
+  opacity:0; pointer-events:none; transition:opacity .25s;
+}
+.overlay.open { opacity:1; pointer-events:all; }
+.sheet {
+  background:var(--card); border:1px solid var(--border); border-radius:24px 24px 0 0;
+  padding:22px 18px 36px; width:100%;
+  transform:translateY(100%); transition:transform .3s cubic-bezier(.34,1.56,.64,1);
+  max-height:88vh; overflow-y:auto;
+}
+.overlay.open .sheet { transform:translateY(0); }
+.sheet-handle { width:40px; height:4px; border-radius:2px; background:var(--border); margin:0 auto 18px; }
+.sheet-title { font-size:18px; font-weight:900; margin-bottom:18px; }
+.inp-label { font-size:11px; font-weight:700; color:var(--muted); letter-spacing:1px; margin-bottom:6px; display:block; }
+.inp {
+  width:100%; background:var(--card2); border:1.5px solid var(--border);
+  border-radius:12px; padding:11px 14px; color:var(--text);
+  font-size:15px; font-family:'Noto Sans KR',sans-serif; outline:none;
+  transition:border-color .2s; margin-bottom:14px;
+}
+.inp:focus { border-color:var(--accent); }
+.inp::placeholder { color:var(--muted); }
+.row-btns { display:flex; gap:10px; margin-top:6px; }
+.btn {
+  flex:1; padding:13px; border-radius:14px; border:none;
+  font-size:14px; font-weight:700; cursor:pointer;
+  font-family:'Noto Sans KR',sans-serif; transition:all .15s;
+}
+.btn:active { transform:scale(0.95); }
+.btn.primary { background:var(--accent); color:#fff; }
+.btn.cancel  { background:var(--card2); color:var(--muted); border:1.5px solid var(--border); }
+
+/* CALENDAR */
+.cal-nav-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+.cal-title { font-size:16px; font-weight:900; }
+.cal-nav {
+  width:34px; height:34px; border-radius:10px; border:1.5px solid var(--border);
+  background:var(--card2); color:var(--text); font-size:14px;
+  display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all .15s;
+}
+.cal-nav:active { background:var(--accent); border-color:var(--accent); }
+.cal-wdays { display:grid; grid-template-columns:repeat(7,1fr); text-align:center; margin-bottom:6px; }
+.cal-wday { font-size:11px; font-weight:700; color:var(--muted); padding:3px 0; }
+.cal-wday:first-child { color:#ef4444; }
+.cal-wday:last-child  { color:var(--accent); }
+.cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; }
+.cal-day {
+  aspect-ratio:1; border-radius:9px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:13px; font-weight:700; cursor:pointer;
+  border:1.5px solid transparent; transition:all .15s;
+}
+.cal-day.other { color:var(--muted); }
+.cal-day.sun { color:#ef4444; }
+.cal-day.sat { color:var(--accent); }
+.cal-day:hover:not(.sel):not(.other) { background:var(--card2); }
+.cal-day.today { border-color:var(--accent); }
+.cal-day.sel { background:var(--accent); color:#fff !important; box-shadow:0 0 10px rgba(79,140,255,.4); }
+
+/* MISC */
+@keyframes slideIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+.empty { text-align:center; padding:28px; color:var(--muted); font-size:13px; line-height:1.7; }
+.toast {
+  position:fixed; bottom:88px; left:50%; transform:translateX(-50%) translateY(12px);
+  background:var(--card); border:1px solid var(--border); border-radius:12px;
+  padding:9px 18px; font-size:13px; font-weight:700;
+  opacity:0; pointer-events:none; transition:all .25s; white-space:nowrap; z-index:999;
+}
+.toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- HEADER -->
+<header>
+  <div class="header-top">
+    <div class="logo">출석<span>CHECK</span></div>
+    <div class="header-right">
+      <span id="syncStatus" style="font-size:11px;font-weight:700;color:var(--present);transition:opacity .5s;opacity:0"></span>
+      <div class="date-chip" onclick="openCal()">📅 <span id="dateChipText"></span></div>
+    </div>
+  </div>
+  <div class="view-tabs">
+    <div class="view-tab active" id="tab-check"   onclick="setView('check')">✅ 출석체크</div>
+    <div class="view-tab"        id="tab-history" onclick="setView('history')">📋 기록보기</div>
+    <div class="view-tab"        id="tab-manage"  onclick="setView('manage')">⚙ 반&학생 편집</div>
+  </div>
+</header>
+
+<!-- CHECK VIEW -->
+<div id="view-check"><div class="classes-wrap" id="checkWrap"></div></div>
+
+<!-- HISTORY VIEW -->
+<div id="view-history" style="display:none">
+  <!-- Sub tabs -->
+  <div class="sub-tabs">
+    <div class="sub-tab active" id="subtab-log"   onclick="setHistoryTab('log')">📋 기록</div>
+    <div class="sub-tab"       id="subtab-stats"  onclick="setHistoryTab('stats')">📊 통계</div>
+  </div>
+  <!-- Log -->
+  <div id="history-log">
+    <div class="history-wrap" id="historyWrap"></div>
+    <div style="padding:0 16px 16px">
+      <button class="nav-btn secondary" style="width:100%;border-radius:14px;padding:13px" onclick="exportCSV()">📊 CSV로 내보내기</button>
+    </div>
+  </div>
+  <!-- Stats -->
+  <div id="history-stats" style="display:none">
+    <div class="classes-wrap" id="statsWrap"></div>
+  </div>
+</div>
+
+<!-- MANAGE VIEW -->
+<div id="view-manage" style="display:none">
+  <div class="classes-wrap" id="manageWrap"></div>
+</div>
+
+</div>
+
+<!-- BOTTOM NAV -->
+<div class="bottom-nav" id="bottomNav">
+  <button class="nav-btn secondary" onclick="exportCSV()">📊 내보내기</button>
+  <button class="nav-btn primary"   id="saveAllBtn" onclick="saveAllClasses()">💾 전체 저장</button>
+</div>
+
+<!-- CALENDAR MODAL -->
+<div class="overlay" id="calOverlay" onclick="closeCalOut(event)">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="cal-nav-row">
+      <button class="cal-nav" onclick="calMove(-1)">◀</button>
+      <div class="cal-title" id="calTitle"></div>
+      <button class="cal-nav" onclick="calMove(1)">▶</button>
+    </div>
+    <div class="cal-wdays">
+      <div class="cal-wday">일</div><div class="cal-wday">월</div>
+      <div class="cal-wday">화</div><div class="cal-wday">수</div>
+      <div class="cal-wday">목</div><div class="cal-wday">금</div>
+      <div class="cal-wday">토</div>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+    <div class="row-btns" style="margin-top:16px">
+      <button class="btn cancel" onclick="closeCal()">취소</button>
+      <button class="btn primary" onclick="confirmCal()">선택</button>
+    </div>
+  </div>
+</div>
+
+<!-- STUDENT ADD/EDIT MODAL -->
+<div class="overlay" id="studentOverlay" onclick="closeStudentOut(event)">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="studentTitle">학생 추가</div>
+
+    <div style="display:flex;gap:10px">
+      <div style="flex:1">
+        <label class="inp-label">이름</label>
+        <input class="inp" id="sName" placeholder="홍길동" maxlength="20">
+      </div>
+      <div style="width:80px">
+        <label class="inp-label">번호</label>
+        <input class="inp" id="sNum" placeholder="1" type="number" min="1">
+      </div>
+    </div>
+
+    <label class="inp-label">반</label>
+    <select class="inp" id="sCls"></select>
+
+    <div style="display:flex;gap:10px">
+      <div style="flex:1">
+        <label class="inp-label">생년월일</label>
+        <input class="inp" id="sBirth" placeholder="2010-01-01" type="date">
+      </div>
+      <div style="flex:1">
+        <label class="inp-label">등록날짜</label>
+        <input class="inp" id="sRegDate" placeholder="오늘" type="date">
+      </div>
+    </div>
+
+    <label class="inp-label">연락처</label>
+    <input class="inp" id="sPhone" placeholder="010-0000-0000" type="tel" maxlength="15">
+
+    <div class="row-btns">
+      <button class="btn cancel" onclick="closeStudentModal()">취소</button>
+      <button class="btn primary" onclick="saveStudent()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- CLASS ADD MODAL -->
+<div class="overlay" id="classOverlay" onclick="closeClassOut(event)">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">반 추가</div>
+    <label class="inp-label">반 이름</label>
+    <input class="inp" id="clsName" placeholder="예) 3반, 영어, 수학" maxlength="12">
+    <div class="row-btns">
+      <button class="btn cancel" onclick="closeClassModal()">취소</button>
+      <button class="btn primary" onclick="saveNewClass()">추가</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script type="module">
+// ════════════════════════════════
+//  DATA
+// ════════════════════════════════
+const EMOJIS = ['🐶','🐱','🐻','🦊','🐼','🐨','🦁','🐯','🐸','🐧','🦋','🌟'];
+function emoji(name){ let n=0; for(let c of name) n+=c.charCodeAt(0); return EMOJIS[n%EMOJIS.length]; }
+
+function roleLabel(num){
+  if(num===1) return {text:'섬김이', color:'#a78bfa', bg:'rgba(167,139,250,0.15)', border:'rgba(167,139,250,0.35)'};
+  if(num===2) return {text:'헬퍼',   color:'#4f8cff', bg:'rgba(79,140,255,0.15)',  border:'rgba(79,140,255,0.35)'};
+  return           {text:'멤버',   color:'#6b7280', bg:'rgba(107,114,128,0.12)', border:'rgba(107,114,128,0.25)'};
+}
+
+let S = {
+  classes:  ['1반','2반','영어','수학'],
+  students: [
+    {id:1, name:'김민준', num:1, cls:'1반', birth:'', phone:'', regDate:''},
+    {id:2, name:'이서연', num:2, cls:'1반', birth:'', phone:'', regDate:''},
+    {id:3, name:'박지호', num:3, cls:'1반', birth:'', phone:'', regDate:''},
+    {id:4, name:'최아인', num:1, cls:'2반', birth:'', phone:'', regDate:''},
+    {id:5, name:'정하은', num:2, cls:'2반', birth:'', phone:'', regDate:''},
+  ],
+  nextId: 6,
+  records: {},   // { 'YYYY-MM-DD': { cls: [ids...] } }
+  draft:   {},   // { cls: Set(ids) }  — current unsaved
+};
+
+let selectedDate = new Date();
+let calViewDate  = new Date();
+let calTempDate  = new Date();
+let currentView  = 'check';
+let editingId    = null;
+
+// ════════════════════════════════
+//  HELPERS
+// ════════════════════════════════
+function dk(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function fmtDate(d){
+  const w=['일','월','화','수','목','금','토'];
+  return `${d.getMonth()+1}월 ${d.getDate()}일 (${w[d.getDay()]})`;
+}
+
+// ════════════════════════════════
+//  VIEW
+// ════════════════════════════════
+function setView(v){
+  currentView = v;
+  ['check','history','manage'].forEach(x=>{
+    document.getElementById('view-'+x).style.display = x===v?'':'none';
+    document.getElementById('tab-'+x).classList.toggle('active', x===v);
+  });
+  const nav     = document.getElementById('bottomNav');
+  const saveBtn = document.getElementById('saveAllBtn');
+  if(v==='check'){
+    nav.style.display='flex'; saveBtn.style.display='flex';
+    renderCheck();
+  } else if(v==='history'){
+    nav.style.display='flex'; saveBtn.style.display='none';
+    renderHistory();
+  } else {
+    nav.style.display='none';
+    renderManage();
+  }
+}
+
+// ════════════════════════════════
+//  CHECK VIEW
+// ════════════════════════════════
+function initDraft(){
+  const key = dk(selectedDate);
+  S.draft = {};
+  S.classes.forEach(cls=>{
+    const saved = S.records[key]?.[cls];
+    S.draft[cls] = saved ? new Set(saved) : new Set();
+  });
+}
+
+function renderCheck(){
+  const wrap = document.getElementById('checkWrap');
+  wrap.innerHTML = '';
+  if(!S.classes.length){
+    wrap.innerHTML = '<div class="empty">반을 먼저 추가해주세요<br>⚙ 반&학생 편집 탭에서 추가하세요</div>';
+    return;
+  }
+  S.classes.forEach((cls,i)=>{
+    const students = S.students.filter(s=>s.cls===cls).sort((a,b)=>(a.num||99)-(b.num||99));
+    const checked  = S.draft[cls] || new Set();
+    const isSaved  = !!(S.records[dk(selectedDate)]?.[cls]);
+
+    const sec = document.createElement('div');
+    sec.className = 'class-section';
+    sec.style.animationDelay = i*0.06+'s';
+    sec.innerHTML = `
+      <div class="class-header">
+        <div>
+          <div class="class-name">${cls}</div>
+          <div class="class-meta">${students.length}명 &middot; 출석 ${checked.size}명 &middot; ${isSaved?'<span style="color:var(--present)">✓ 저장됨</span>':'<span style="color:var(--muted)">미저장</span>'}</div>
+        </div>
+        <button class="save-btn" onclick="saveCls('${cls}')">
+          💾 저장
+        </button>
+      </div>
+      <div class="student-rows">
+        ${!students.length
+          ? '<div class="empty" style="padding:18px">학생이 없습니다</div>'
+          : students.map(s=>{
+            const r=roleLabel(s.num);
+            return `
+            <div class="student-row ${checked.has(s.id)?'checked':''}" onclick="toggle('${cls}',${s.id})">
+              <span class="role-badge" style="color:${r.color};background:${r.bg};border:1px solid ${r.border}">${r.text}</span>
+              <div class="s-info">
+                <div class="s-name">${s.num?s.num+'번 ':''}${s.name}</div>
+              </div>
+              <div class="checkbox ${checked.has(s.id)?'on':''}">${checked.has(s.id)?'✓':''}</div>
+            </div>`;}).join('')
+        }
+      </div>`;
+    wrap.appendChild(sec);
+  });
+}
+
+function toggle(cls, id){
+  if(!S.draft[cls]) S.draft[cls]=new Set();
+  S.draft[cls].has(id) ? S.draft[cls].delete(id) : S.draft[cls].add(id);
+  renderCheck();
+}
+
+function saveCls(cls){
+  const key = dk(selectedDate);
+  if(!S.records[key]) S.records[key]={};
+  S.records[key][cls] = [...(S.draft[cls]||new Set())];
+  saveToStorage();
+  showToast(`✅ ${cls} 저장 완료!`);
+  renderCheck();
+}
+
+function saveAllClasses(){
+  const key = dk(selectedDate);
+  if(!S.records[key]) S.records[key]={};
+  S.classes.forEach(cls=>{ S.records[key][cls] = [...(S.draft[cls]||new Set())]; });
+  saveToStorage();
+  showToast('💾 전체 저장 완료!');
+  renderCheck();
+}
+
+// ════════════════════════════════
+//  HISTORY VIEW
+// ════════════════════════════════
+let historyTab = 'log';
+
+function setHistoryTab(tab){
+  historyTab = tab;
+  ['log','stats'].forEach(t=>{
+    document.getElementById('subtab-'+t).classList.toggle('active', t===tab);
+    document.getElementById('history-'+t).style.display = t===tab ? '' : 'none';
+  });
+  if(tab==='log') renderHistoryLog();
+  else renderStats();
+}
+
+function renderHistory(){
+  setHistoryTab(historyTab);
+}
+
+function renderHistoryLog(){
+  const wrap = document.getElementById('historyWrap');
+  const keys = Object.keys(S.records).sort().reverse();
+  if(!keys.length){
+    wrap.innerHTML='<div class="empty">저장된 출석 기록이 없어요<br>출석체크 탭에서 저장해보세요 📋</div>';
+    return;
+  }
+  wrap.innerHTML = keys.map(key=>{
+    const rec = S.records[key];
+    const [y,m,d] = key.split('-');
+    const dateObj = new Date(+y,+m-1,+d);
+    const w = ['일','월','화','수','목','금','토'];
+    const dateStr = `${+m}월 ${+d}일 (${w[dateObj.getDay()]})`;
+    const totalP = Object.values(rec).reduce((a,v)=>a+v.length,0);
+    const totalA = Object.keys(rec).reduce((a,cls)=>a+S.students.filter(s=>s.cls===cls).length,0);
+
+    const blocks = Object.entries(rec).map(([cls,ids])=>{
+      const all = S.students.filter(s=>s.cls===cls).sort((a,b)=>(a.num||99)-(b.num||99));
+      const ps  = new Set(ids);
+      return `
+        <div class="history-class-block">
+          <div class="history-class-name">${cls} &nbsp;·&nbsp; ${ids.length}/${all.length}명 출석</div>
+          <div class="history-students">
+            ${all.map(s=>{
+              const r=roleLabel(s.num);
+              return `<span class="history-chip ${ps.has(s.id)?'':'absent'}">
+                <span style="font-size:10px;opacity:0.7">${r.text}</span> ${s.name}
+              </span>`;}).join('')}
+          </div>
+        </div>`;
+    }).join('');
+
+    return `
+      <div class="history-card">
+        <div class="history-date-header">
+          <div>
+            <div class="history-date">${dateStr}</div>
+            <div class="history-summary">전체 ${totalP}/${totalA}명 출석</div>
+          </div>
+          <button class="del-rec-btn" onclick="delRecord('${key}')">🗑</button>
+        </div>
+        ${blocks}
+      </div>`;
+  }).join('');
+}
+
+function delRecord(key){
+  if(!confirm('이 날의 출석 기록을 삭제할까요?')) return;
+  delete S.records[key];
+  saveToStorage();
+  renderHistory();
+  showToast('🗑 기록 삭제 완료');
+}
+
+// ════════════════════════════════
+//  STATS VIEW
+// ════════════════════════════════
+function renderStats(){
+  const wrap = document.getElementById('statsWrap');
+  const keys = Object.keys(S.records);
+  if(!keys.length){
+    wrap.innerHTML='<div class="empty">저장된 기록이 없어요<br>출석체크 후 저장하면 통계가 생겨요 📊</div>';
+    return;
+  }
+  wrap.innerHTML = '';
+
+  // 반별로 섹션 나누기
+  S.classes.forEach((cls, ci) => {
+    const students = S.students.filter(s=>s.cls===cls).sort((a,b)=>(a.num||99)-(b.num||99));
+    if(!students.length) return;
+
+    // 이 반이 기록된 날짜 수 (해당 반 데이터가 있는 날만)
+    const clsDays = keys.filter(k => S.records[k]?.[cls] !== undefined);
+    const totalDays = clsDays.length;
+
+    if(!totalDays) return;
+
+    // 학생별 출석 수 계산
+    const studentStats = students.map(s => {
+      const presentCount = clsDays.filter(k => (S.records[k][cls] || []).includes(s.id)).length;
+      const pct = Math.round(presentCount / totalDays * 100);
+      return { ...s, presentCount, pct };
+    }).sort((a,b) => b.pct - a.pct); // 출석률 높은 순
+
+    // 반 평균
+    const avgPct = Math.round(studentStats.reduce((a,s)=>a+s.pct,0) / studentStats.length);
+
+    // 바 색상 함수
+    function barColor(pct){
+      if(pct>=80) return 'linear-gradient(90deg,#22c55e,#4ade80)';
+      if(pct>=60) return 'linear-gradient(90deg,#f59e0b,#fcd34d)';
+      return 'linear-gradient(90deg,#ef4444,#f87171)';
+    }
+
+    const sec = document.createElement('div');
+    sec.className = 'stats-section';
+    sec.style.animationDelay = ci*0.06+'s';
+    sec.innerHTML = `
+      <div class="stats-cls-header">
+        <div>
+          <div class="stats-cls-name">${cls}</div>
+          <div class="stats-cls-meta">총 ${totalDays}일 기록 · 반 평균 출석률 ${avgPct}%</div>
+        </div>
+        <div style="font-family:'Space Mono',monospace;font-size:22px;font-weight:700;color:${avgPct>=80?'var(--present)':avgPct>=60?'#f59e0b':'var(--danger)'}">${avgPct}%</div>
+      </div>
+      ${studentStats.map((s,i)=>`
+        <div class="stat-row">
+          <div class="stat-rank">${i+1}</div>
+          <div class="s-avatar" style="width:32px;height:32px;font-size:14px;flex-shrink:0">${emoji(s.name)}</div>
+          <div class="stat-bar-wrap">
+            <div class="stat-name-row">
+              <span class="stat-name">${s.num?s.num+'번 ':''}${s.name}</span>
+              <span class="stat-pct" style="color:${s.pct>=80?'var(--present)':s.pct>=60?'#f59e0b':'var(--danger)'}">${s.pct}%</span>
+            </div>
+            <div class="stat-bar-track">
+              <div class="stat-bar-fill" style="width:${s.pct}%;background:${barColor(s.pct)}"></div>
+            </div>
+            <div class="stat-count">${s.presentCount} / ${totalDays}일 출석</div>
+          </div>
+        </div>`).join('')}
+    `;
+    wrap.appendChild(sec);
+  });
+
+  if(!wrap.children.length){
+    wrap.innerHTML='<div class="empty">통계를 낼 수 있는 데이터가 없어요</div>';
+  }
+}
+
+// ════════════════════════════════
+//  MANAGE VIEW
+// ════════════════════════════════
+function renderManage(){
+  const wrap = document.getElementById('manageWrap');
+  wrap.innerHTML='';
+
+  // Add class button
+  const addRow = document.createElement('button');
+  addRow.className='nav-btn primary';
+  addRow.style.cssText='width:100%;border-radius:14px;padding:13px;margin-bottom:4px';
+  addRow.innerHTML='＋ 반 추가';
+  addRow.onclick=openClassModal;
+  wrap.appendChild(addRow);
+
+  S.classes.forEach((cls,i)=>{
+    const students = S.students.filter(s=>s.cls===cls).sort((a,b)=>(a.num||99)-(b.num||99));
+    const sec = document.createElement('div');
+    sec.className='manage-section';
+    sec.style.animationDelay=i*0.05+'s';
+    sec.innerHTML=`
+      <div class="manage-header">
+        <div class="manage-class-name">${cls} <span style="color:var(--muted);font-weight:400;font-size:12px">${students.length}명</span></div>
+        <div class="header-actions">
+          <button class="icon-btn add" onclick="openStudentModal(null,'${cls}')" title="학생 추가">＋</button>
+          <button class="icon-btn del2" onclick="delClass('${cls}')" title="반 삭제">🗑</button>
+        </div>
+      </div>
+      ${!students.length
+        ? '<div class="empty" style="padding:16px;font-size:12px">학생을 추가해보세요</div>'
+        : students.map(s=>{
+          const r=roleLabel(s.num);
+          return `
+          <div class="manage-row">
+            <span class="role-badge" style="color:${r.color};background:${r.bg};border:1px solid ${r.border}">${r.text}</span>
+            <div class="m-name">${s.num?s.num+'번 ':''}${s.name}</div>
+            <div style="display:flex;gap:6px">
+              <button class="sm-btn edit" onclick="openStudentModal(${s.id},'${cls}')">수정</button>
+              <button class="sm-btn del"  onclick="delStudent(${s.id})">삭제</button>
+            </div>
+          </div>`;}).join('')
+      }`;
+    wrap.appendChild(sec);
+  });
+}
+
+function delClass(cls){
+  if(!confirm(`'${cls}' 반을 삭제할까요?\n소속 학생도 함께 삭제됩니다.`)) return;
+  S.classes = S.classes.filter(c=>c!==cls);
+  S.students = S.students.filter(s=>s.cls!==cls);
+  saveToStorage();
+  renderManage();
+  showToast(`🗑 ${cls} 삭제 완료`);
+}
+function delStudent(id){
+  const s=S.students.find(x=>x.id===id);
+  if(!s||!confirm(`'${s.name}' 학생을 삭제할까요?`)) return;
+  S.students=S.students.filter(x=>x.id!==id);
+  saveToStorage();
+  renderManage();
+  showToast('🗑 삭제 완료');
+}
+
+// ════════════════════════════════
+//  STUDENT MODAL
+// ════════════════════════════════
+function openStudentModal(id, defCls){
+  editingId=id;
+  document.getElementById('studentTitle').textContent = id?'학생 수정':'학생 추가';
+  const s = id ? S.students.find(x=>x.id===id) : null;
+  const today = new Date().toISOString().slice(0,10);
+  document.getElementById('sName').value    = s?s.name:'';
+  document.getElementById('sNum').value     = s?(s.num||''):'';
+  document.getElementById('sBirth').value   = s?(s.birth||''):'';
+  document.getElementById('sPhone').value   = s?(s.phone||''):'';
+  document.getElementById('sRegDate').value = s?(s.regDate||today):today;
+  const sel=document.getElementById('sCls');
+  sel.innerHTML=S.classes.map(c=>`<option ${c===(s?s.cls:defCls)?'selected':''}>${c}</option>`).join('');
+  document.getElementById('studentOverlay').classList.add('open');
+  setTimeout(()=>document.getElementById('sName').focus(),300);
+}
+function closeStudentModal(){ document.getElementById('studentOverlay').classList.remove('open'); }
+function closeStudentOut(e){ if(e.target===document.getElementById('studentOverlay')) closeStudentModal(); }
+function saveStudent(){
+  const name=document.getElementById('sName').value.trim();
+  if(!name){ document.getElementById('sName').focus(); return; }
+  const num    = parseInt(document.getElementById('sNum').value)||null;
+  const cls    = document.getElementById('sCls').value;
+  const birth  = document.getElementById('sBirth').value;
+  const phone  = document.getElementById('sPhone').value.trim();
+  const regDate= document.getElementById('sRegDate').value;
+  if(editingId){
+    const s=S.students.find(x=>x.id===editingId);
+    s.name=name; s.num=num; s.cls=cls; s.birth=birth; s.phone=phone; s.regDate=regDate;
+    showToast(`✏️ ${name} 수정 완료!`);
+  } else {
+    S.students.push({id:S.nextId++, name, num, cls, birth, phone, regDate});
+    showToast(`🎉 ${name} 추가 완료!`);
+  }
+  saveToStorage();
+  closeStudentModal();
+  renderManage();
+}
+
+// ════════════════════════════════
+//  CLASS MODAL
+// ════════════════════════════════
+function openClassModal(){
+  document.getElementById('clsName').value='';
+  document.getElementById('classOverlay').classList.add('open');
+  setTimeout(()=>document.getElementById('clsName').focus(),300);
+}
+function closeClassModal(){ document.getElementById('classOverlay').classList.remove('open'); }
+function closeClassOut(e){ if(e.target===document.getElementById('classOverlay')) closeClassModal(); }
+function saveNewClass(){
+  const name=document.getElementById('clsName').value.trim();
+  if(!name){ document.getElementById('clsName').focus(); return; }
+  if(S.classes.includes(name)){ showToast('⚠️ 이미 있는 반 이름이에요'); return; }
+  S.classes.push(name);
+  S.draft[name]=new Set();
+  saveToStorage();
+  closeClassModal();
+  renderManage();
+  showToast(`🎉 ${name} 추가 완료!`);
+}
+
+// ════════════════════════════════
+//  CALENDAR
+// ════════════════════════════════
+function openCal(){
+  calTempDate=new Date(selectedDate);
+  calViewDate=new Date(selectedDate);
+  renderCal();
+  document.getElementById('calOverlay').classList.add('open');
+}
+function closeCal(){ document.getElementById('calOverlay').classList.remove('open'); }
+function closeCalOut(e){ if(e.target===document.getElementById('calOverlay')) closeCal(); }
+function confirmCal(){
+  selectedDate=new Date(calTempDate);
+  document.getElementById('dateChipText').textContent=fmtDate(selectedDate);
+  initDraft();
+  closeCal();
+  if(currentView==='check') renderCheck();
+  showToast('📅 '+fmtDate(selectedDate)+' 선택');
+}
+function calMove(dir){ calViewDate.setMonth(calViewDate.getMonth()+dir); renderCal(); }
+function renderCal(){
+  const y=calViewDate.getFullYear(), m=calViewDate.getMonth();
+  document.getElementById('calTitle').textContent=`${y}년 ${m+1}월`;
+  const today=new Date(), fd=new Date(y,m,1).getDay(), dim=new Date(y,m+1,0).getDate(), pd=new Date(y,m,0).getDate();
+  let h='';
+  for(let i=fd-1;i>=0;i--){
+    const dw=(fd-1-i+70)%7;
+    h+=`<div class="cal-day other ${dw===0?'sun':dw===6?'sat':''}">${pd-i}</div>`;
+  }
+  for(let d=1;d<=dim;d++){
+    const dw=new Date(y,m,d).getDay();
+    const iT=today.getFullYear()===y&&today.getMonth()===m&&today.getDate()===d;
+    const iS=calTempDate.getFullYear()===y&&calTempDate.getMonth()===m&&calTempDate.getDate()===d;
+    h+=`<div class="cal-day ${dw===0?'sun':dw===6?'sat':''} ${iT&&!iS?'today':''} ${iS?'sel':''}" onclick="selDay(${y},${m},${d})">${d}</div>`;
+  }
+  const tot=fd+dim, rem=tot%7===0?0:7-tot%7;
+  for(let d=1;d<=rem;d++){
+    const dw=(tot+d-1)%7;
+    h+=`<div class="cal-day other ${dw===0?'sun':dw===6?'sat':''}">${d}</div>`;
+  }
+  document.getElementById('calGrid').innerHTML=h;
+}
+function selDay(y,m,d){ calTempDate=new Date(y,m,d); renderCal(); }
+
+// ════════════════════════════════
+//  EXPORT
+// ════════════════════════════════
+function exportCSV(){
+  let csv='\uFEFF날짜,반,번호,이름,출석\n';
+  Object.entries(S.records).sort().forEach(([key,rec])=>{
+    Object.entries(rec).forEach(([cls,ids])=>{
+      const ps=new Set(ids);
+      S.students.filter(s=>s.cls===cls).sort((a,b)=>(a.num||99)-(b.num||99)).forEach(s=>{
+        csv+=`${key},${cls},${s.num||''},${s.name},${ps.has(s.id)?'출석':'미출석'}\n`;
+      });
+    });
+  });
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
+  a.download='출석기록.csv'; a.click();
+  showToast('📊 CSV 저장 완료!');
+}
+
+// ════════════════════════════════
+//  TOAST
+// ════════════════════════════════
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+// ════════════════════════════════
+//  INIT
+// ════════════════════════════════
+// ════════════════════════════════
+//  FIREBASE
+// ════════════════════════════════
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyD3OV5aisCnqmmXwn7ohFm0O9oz3C0uRLE",
+  authDomain: "attendance-check-d5c95.firebaseapp.com",
+  databaseURL: "https://attendance-check-d5c95-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "attendance-check-d5c95",
+  storageBucket: "attendance-check-d5c95.firebasestorage.app",
+  messagingSenderId: "623451004149",
+  appId: "1:623451004149:web:596e1d66ba0938095df9bc"
+};
+
+const fbApp = initializeApp(firebaseConfig);
+const db    = getDatabase(fbApp);
+const ROOT  = 'attendance';
+
+let isSyncing = false;
+
+function saveToStorage(){
+  if(isSyncing) return;
+  const data = {
+    classes:  S.classes,
+    students: S.students,
+    records:  S.records,
+    nextId:   S.nextId
+  };
+  set(ref(db, ROOT), data)
+    .then(()=> showSyncStatus('✅ 저장됨'))
+    .catch(e => { console.error(e); showSyncStatus('⚠️ 저장 실패'); });
+}
+
+function showSyncStatus(msg){
+  const el = document.getElementById('syncStatus');
+  el.textContent = msg;
+  el.style.opacity = '1';
+  setTimeout(()=>{ el.style.opacity='0'; }, 2500);
+}
+
+// 실시간 동기화 — DB 변경 시 자동 반영
+function startRealtimeSync(){
+  onValue(ref(db, ROOT), (snapshot)=>{
+    const data = snapshot.val();
+    if(!data) { bootApp(); return; }
+    isSyncing = true;
+    S.classes  = data.classes  || S.classes;
+    S.students = data.students || [];
+    S.records  = data.records  || {};
+    S.nextId   = data.nextId   || S.nextId;
+    isSyncing = false;
+    initDraft();
+    if(currentView==='check')   renderCheck();
+    else if(currentView==='history') renderHistory();
+    else if(currentView==='manage')  renderManage();
+    showSyncStatus('🔄 동기화됨');
+  });
+}
+
+function bootApp(){
+  document.getElementById('dateChipText').textContent = fmtDate(selectedDate);
+  initDraft();
+  setView('check');
+}
+
+// ── 앱 시작
+document.getElementById('dateChipText').textContent = fmtDate(selectedDate);
+startRealtimeSync();
+document.getElementById('sName').addEventListener('keydown',e=>{ if(e.key==='Enter') saveStudent(); });
+document.getElementById('clsName').addEventListener('keydown',e=>{ if(e.key==='Enter') saveNewClass(); });
+
+// Expose to global scope for inline onclick handlers
+window.setView=setView; window.openCal=openCal; window.closeCal=closeCal; window.confirmCal=confirmCal;
+window.calMove=calMove; window.selDay=selDay; window.setHistoryTab=setHistoryTab;
+window.toggle=toggle; window.saveCls=saveCls; window.saveAllClasses=saveAllClasses;
+window.delRecord=delRecord; window.renderManage=renderManage;
+window.openStudentModal=openStudentModal; window.closeStudentModal=closeStudentModal; window.saveStudent=saveStudent;
+window.openClassModal=openClassModal; window.closeClassModal=closeClassModal; window.saveNewClass=saveNewClass;
+window.delClass=delClass; window.delStudent=delStudent; window.exportCSV=exportCSV;
+window.closeStudentOut=closeStudentOut; window.closeClassOut=closeClassOut; window.closeCalOut=closeCalOut;
+</script>
+</body>
+</html>
