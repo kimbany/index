@@ -357,8 +357,8 @@ header {
       비밀번호가 틀렸어요
     </div>
     <div class="row-btns">
-      <button class="btn cancel" onclick="closeEditPwOverlay()">취소</button>
-      <button class="btn primary" onclick="checkEditPw()">확인</button>
+      <button class="btn cancel" id="editPwCancelBtn">취소</button>
+      <button class="btn primary" id="editPwConfirmBtn">확인</button>
     </div>
   </div>
 </div>
@@ -371,13 +371,13 @@ header {
     <div class="logo">출석<span>CHECK</span></div>
     <div class="header-right">
       <span id="syncStatus" style="font-size:11px;font-weight:700;color:var(--present);transition:opacity .5s;opacity:0"></span>
-      <div class="date-chip" onclick="openCal()">📅 <span id="dateChipText"></span></div>
+      <div class="date-chip" id="dateChip">📅 <span id="dateChipText"></span></div>
     </div>
   </div>
   <div class="view-tabs">
-    <div class="view-tab active" id="tab-check"   onclick="setView('check')">✅ 출석체크</div>
-    <div class="view-tab"        id="tab-history" onclick="setView('history')">📋 기록보기</div>
-    <div class="view-tab"        id="tab-manage"  onclick="requestEditPw()">⚙ 편집</div>
+    <div class="view-tab active" id="tab-check">✅ 출석체크</div>
+    <div class="view-tab"        id="tab-history">📋 기록보기</div>
+    <div class="view-tab"        id="tab-manage">⚙ 편집</div>
   </div>
 </header>
 
@@ -388,14 +388,14 @@ header {
 <div id="view-history" style="display:none">
   <!-- Sub tabs -->
   <div class="sub-tabs">
-    <div class="sub-tab active" id="subtab-log"   onclick="setHistoryTab('log')">📋 기록</div>
-    <div class="sub-tab"       id="subtab-stats"  onclick="setHistoryTab('stats')">📊 통계</div>
+    <div class="sub-tab active" id="subtab-log">📋 기록</div>
+    <div class="sub-tab"       id="subtab-stats">📊 통계</div>
   </div>
   <!-- Log -->
   <div id="history-log">
     <div class="history-wrap" id="historyWrap"></div>
     <div style="padding:0 16px 16px">
-      <button class="nav-btn secondary" style="width:100%;border-radius:14px;padding:13px" onclick="exportCSV()">📊 CSV로 내보내기</button>
+      <button class="nav-btn secondary" id="exportCsvBtn" style="width:100%;border-radius:14px;padding:13px">📊 CSV로 내보내기</button>
     </div>
   </div>
   <!-- Stats -->
@@ -407,8 +407,8 @@ header {
 <!-- MANAGE VIEW -->
 <div id="view-manage" style="display:none">
   <div class="sub-tabs" style="position:sticky;top:89px;z-index:90;">
-    <div class="sub-tab active" id="subtab-members" onclick="setManageTab('members')">👨‍👩‍👧 가족&멤버 편집</div>
-    <div class="sub-tab"       id="subtab-settings" onclick="setManageTab('settings')">⚙ 설정</div>
+    <div class="sub-tab active" id="subtab-members">👨‍👩‍👧 가족&멤버 편집</div>
+    <div class="sub-tab"       id="subtab-settings">⚙ 설정</div>
   </div>
   <div id="manage-members">
     <div class="classes-wrap" id="manageWrap"></div>
@@ -422,8 +422,8 @@ header {
 
 <!-- BOTTOM NAV -->
 <div class="bottom-nav" id="bottomNav">
-  <button class="nav-btn secondary" onclick="exportCSV()">📊 내보내기</button>
-  <button class="nav-btn primary"   id="saveAllBtn" onclick="saveAllClasses()">💾 전체 저장</button>
+  <button class="nav-btn secondary" id="exportBtn">📊 내보내기</button>
+  <button class="nav-btn primary"   id="saveAllBtn">💾 전체 저장</button>
 </div>
 
 <!-- CALENDAR MODAL -->
@@ -431,9 +431,9 @@ header {
   <div class="sheet">
     <div class="sheet-handle"></div>
     <div class="cal-nav-row">
-      <button class="cal-nav" onclick="calMove(-1)">◀</button>
+      <button class="cal-nav" id="calPrev">◀</button>
       <div class="cal-title" id="calTitle"></div>
-      <button class="cal-nav" onclick="calMove(1)">▶</button>
+      <button class="cal-nav" id="calNext">▶</button>
     </div>
     <div class="cal-wdays">
       <div class="cal-wday">일</div><div class="cal-wday">월</div>
@@ -443,8 +443,8 @@ header {
     </div>
     <div class="cal-grid" id="calGrid"></div>
     <div class="row-btns" style="margin-top:16px">
-      <button class="btn cancel" onclick="closeCal()">취소</button>
-      <button class="btn primary" onclick="confirmCal()">선택</button>
+      <button class="btn cancel" id="calCancelBtn">취소</button>
+      <button class="btn primary" id="calConfirmBtn">선택</button>
     </div>
   </div>
 </div>
@@ -484,8 +484,8 @@ header {
     <input class="inp" id="sPhone" placeholder="010-0000-0000" type="tel" maxlength="15">
 
     <div class="row-btns">
-      <button class="btn cancel" onclick="closeStudentModal()">취소</button>
-      <button class="btn primary" onclick="saveStudent()">저장</button>
+      <button class="btn cancel" id="studentCancelBtn">취소</button>
+      <button class="btn primary" id="studentSaveBtn">저장</button>
     </div>
   </div>
 </div>
@@ -498,8 +498,8 @@ header {
     <label class="inp-label">가족 이름</label>
     <input class="inp" id="clsName" placeholder="예) 1가족, 2가족, 청년부" maxlength="12">
     <div class="row-btns">
-      <button class="btn cancel" onclick="closeClassModal()">취소</button>
-      <button class="btn primary" onclick="saveNewClass()">추가</button>
+      <button class="btn cancel" id="classCancelBtn">취소</button>
+      <button class="btn primary" id="classSaveBtn">추가</button>
     </div>
   </div>
 </div>
@@ -536,8 +536,8 @@ header {
     </div>
 
     <div class="row-btns">
-      <button class="btn cancel" onclick="closePwChangeModal()">취소</button>
-      <button class="btn primary" onclick="savePwChange()">저장</button>
+      <button class="btn cancel" id="pwChangeCancelBtn">취소</button>
+      <button class="btn primary" id="pwChangeSaveBtn">저장</button>
     </div>
   </div>
 </div>
@@ -552,8 +552,38 @@ header {
     <label class="inp-label">새 이름</label>
     <input class="inp" id="editClsNew" placeholder="새 가족 이름" maxlength="12">
     <div class="row-btns">
-      <button class="btn cancel" onclick="closeEditClassModal()">취소</button>
-      <button class="btn primary" onclick="saveEditClass()">저장</button>
+      <button class="btn cancel" id="editClassCancelBtn">취소</button>
+      <button class="btn primary" id="editClassSaveBtn">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM POPUP -->
+<div id="confirmOverlay" style="
+  position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);
+  z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;
+  opacity:0;pointer-events:none;transition:opacity .2s;
+">
+  <div style="
+    background:#1a1d27;border:1.5px solid #2d3148;border-radius:20px;
+    padding:24px 20px;width:100%;max-width:320px;
+    transform:scale(0.92);transition:transform .2s;
+  " id="confirmBox">
+    <div style="font-size:16px;font-weight:900;margin-bottom:8px;text-align:center">⚠️ 출석 해제</div>
+    <div id="confirmMsg" style="font-size:14px;color:#6b7280;text-align:center;line-height:1.6;margin-bottom:20px"></div>
+    <div style="display:flex;gap:10px;">
+      <button id="confirmNo" style="
+        flex:1;padding:13px;border-radius:12px;border:1.5px solid #2d3148;
+        background:#22263a;color:#f0f2ff;font-size:14px;font-weight:700;
+        cursor:pointer;font-family:'Noto Sans KR',sans-serif;">
+        아니오
+      </button>
+      <button id="confirmYes" style="
+        flex:1;padding:13px;border-radius:12px;border:none;
+        background:#ef4444;color:#fff;font-size:14px;font-weight:700;
+        cursor:pointer;font-family:'Noto Sans KR',sans-serif;">
+        예, 해제할게요
+      </button>
     </div>
   </div>
 </div>
@@ -684,8 +714,17 @@ function renderCheck(){
 
 function toggle(cls, id){
   if(!S.draft[cls]) S.draft[cls]=new Set();
-  S.draft[cls].has(id) ? S.draft[cls].delete(id) : S.draft[cls].add(id);
-  renderCheck();
+  if(S.draft[cls].has(id)){
+    // 체크 해제 시 확인 팝업
+    const s = S.students.find(x=>x.id===id);
+    showConfirm(
+      `${s.name} 출석을 해제할까요?`,
+      ()=>{ S.draft[cls].delete(id); renderCheck(); }
+    );
+  } else {
+    S.draft[cls].add(id);
+    renderCheck();
+  }
 }
 
 function saveCls(cls){
@@ -1144,6 +1183,28 @@ function exportCSV(){
 }
 
 // ════════════════════════════════
+//  CONFIRM POPUP
+// ════════════════════════════════
+let confirmCallback = null;
+function showConfirm(msg, onYes){
+  confirmCallback = onYes;
+  document.getElementById('confirmMsg').textContent = msg;
+  const overlay = document.getElementById('confirmOverlay');
+  const box     = document.getElementById('confirmBox');
+  overlay.style.opacity      = '1';
+  overlay.style.pointerEvents= 'all';
+  box.style.transform        = 'scale(1)';
+}
+function closeConfirm(){
+  const overlay = document.getElementById('confirmOverlay');
+  const box     = document.getElementById('confirmBox');
+  overlay.style.opacity      = '0';
+  overlay.style.pointerEvents= 'none';
+  box.style.transform        = 'scale(0.92)';
+  confirmCallback = null;
+}
+
+// ════════════════════════════════
 //  TOAST
 // ════════════════════════════════
 function showToast(msg){
@@ -1350,11 +1411,68 @@ startRealtimeSync();
 document.getElementById('sName').addEventListener('keydown',e=>{ if(e.key==='Enter') saveStudent(); });
 document.getElementById('clsName').addEventListener('keydown',e=>{ if(e.key==='Enter') saveNewClass(); });
 
-// 잠금화면 이벤트 리스너 (module scope 문제 우회)
+// ── 모든 고정 버튼 이벤트 리스너 (module scope 문제 완전 해결)
 document.getElementById('lockBtn').addEventListener('click', checkLockPw);
 document.getElementById('lockPwInput').addEventListener('keydown', e=>{ if(e.key==='Enter') checkLockPw(); });
 
-// Expose to global scope for inline onclick handlers
+// 메인 탭
+document.getElementById('tab-check').addEventListener('click', ()=>setView('check'));
+document.getElementById('tab-history').addEventListener('click', ()=>setView('history'));
+document.getElementById('tab-manage').addEventListener('click', requestEditPw);
+document.getElementById('dateChip').addEventListener('click', openCal);
+
+// 하단 버튼
+document.getElementById('exportBtn').addEventListener('click', exportCSV);
+document.getElementById('saveAllBtn').addEventListener('click', saveAllClasses);
+document.getElementById('exportCsvBtn').addEventListener('click', exportCSV);
+
+// 히스토리 서브탭
+document.getElementById('subtab-log').addEventListener('click', ()=>setHistoryTab('log'));
+document.getElementById('subtab-stats').addEventListener('click', ()=>setHistoryTab('stats'));
+
+// 편집 서브탭
+document.getElementById('subtab-members').addEventListener('click', ()=>setManageTab('members'));
+document.getElementById('subtab-settings').addEventListener('click', ()=>setManageTab('settings'));
+
+// 달력 모달
+document.getElementById('calPrev').addEventListener('click', ()=>calMove(-1));
+document.getElementById('calNext').addEventListener('click', ()=>calMove(1));
+document.getElementById('calCancelBtn').addEventListener('click', closeCal);
+document.getElementById('calConfirmBtn').addEventListener('click', confirmCal);
+
+// 학생 모달
+document.getElementById('studentCancelBtn').addEventListener('click', closeStudentModal);
+document.getElementById('studentSaveBtn').addEventListener('click', saveStudent);
+
+// 가족 모달
+document.getElementById('classCancelBtn').addEventListener('click', closeClassModal);
+document.getElementById('classSaveBtn').addEventListener('click', saveNewClass);
+
+// 가족 이름 수정 모달
+document.getElementById('editClassCancelBtn').addEventListener('click', closeEditClassModal);
+document.getElementById('editClassSaveBtn').addEventListener('click', saveEditClass);
+
+// 비밀번호 변경 모달
+document.getElementById('pwChangeCancelBtn').addEventListener('click', closePwChangeModal);
+document.getElementById('pwChangeSaveBtn').addEventListener('click', savePwChange);
+
+// 편집 비밀번호 모달
+document.getElementById('editPwCancelBtn').addEventListener('click', closeEditPwOverlay);
+document.getElementById('editPwConfirmBtn').addEventListener('click', checkEditPw);
+document.getElementById('editPwInput').addEventListener('keydown', e=>{ if(e.key==='Enter') checkEditPw(); });
+
+// 확인 팝업
+document.getElementById('confirmNo').addEventListener('click', closeConfirm);
+document.getElementById('confirmYes').addEventListener('click', ()=>{
+  if(confirmCallback) confirmCallback();
+  closeConfirm();
+});
+// 배경 클릭 시 닫기
+document.getElementById('confirmOverlay').addEventListener('click', e=>{
+  if(e.target===document.getElementById('confirmOverlay')) closeConfirm();
+});
+
+// Expose to global scope for inline onclick handlers (동적 렌더링 요소용)
 window.setView=setView; window.openCal=openCal; window.closeCal=closeCal; window.confirmCal=confirmCal;
 window.calMove=calMove; window.selDay=selDay; window.setHistoryTab=setHistoryTab;
 window.toggle=toggle; window.saveCls=saveCls; window.saveAllClasses=saveAllClasses;
