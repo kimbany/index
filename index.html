@@ -411,11 +411,27 @@ header {
     <div class="sub-tab"       id="subtab-settings">⚙ 설정</div>
   </div>
   <div id="manage-members">
-    <div class="classes-wrap" id="manageWrap"></div>
+    <div class="classes-wrap" id="manageWrap" style="padding-bottom:80px"></div>
   </div>
   <div id="manage-settings" style="display:none">
     <div class="classes-wrap" id="settingsWrap"></div>
   </div>
+</div>
+
+<!-- 가족 추가 Fixed 버튼 (편집 탭 전용) -->
+<div id="addFamilyBar" style="
+  display:none;
+  position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+  width:100%;max-width:480px;
+  padding:12px 16px 28px;
+  background:rgba(15,17,23,0.95);backdrop-filter:blur(12px);
+  border-top:1px solid #2d3148;z-index:200;
+">
+  <button id="addFamilyBtn" style="
+    width:100%;padding:14px;border-radius:14px;border:none;
+    background:var(--accent);color:#fff;font-size:15px;font-weight:900;
+    cursor:pointer;font-family:'Noto Sans KR',sans-serif;
+  ">＋ 가족 추가</button>
 </div>
 
 </div>
@@ -702,7 +718,7 @@ function renderCheck(){
             <div class="student-row ${checked.has(s.id)?'checked':''}" onclick="toggle('${cls}',${s.id})">
               <span class="role-badge" style="color:${r.color};background:${r.bg};border:1px solid ${r.border}">${r.text}</span>
               <div class="s-info">
-                <div class="s-name">${s.num?s.num+'번 ':''}${s.name}</div>
+                <div class="s-name">${s.name}</div>
               </div>
               <div class="checkbox ${checked.has(s.id)?'on':''}">${checked.has(s.id)?'✓':''}</div>
             </div>`;}).join('')
@@ -875,7 +891,7 @@ function renderStats(){
           <div class="s-avatar" style="width:32px;height:32px;font-size:14px;flex-shrink:0">${emoji(s.name)}</div>
           <div class="stat-bar-wrap">
             <div class="stat-name-row">
-              <span class="stat-name">${s.num?s.num+'번 ':''}${s.name}</span>
+              <span class="stat-name">${s.name}</span>
               <span class="stat-pct" style="color:${s.pct>=80?'var(--present)':s.pct>=60?'#f59e0b':'var(--danger)'}">${s.pct}%</span>
             </div>
             <div class="stat-bar-track">
@@ -904,6 +920,8 @@ function setManageTab(tab){
     document.getElementById('subtab-'+t).classList.toggle('active', t===tab);
     document.getElementById('manage-'+t).style.display = t===tab ? '' : 'none';
   });
+  const bar = document.getElementById('addFamilyBar');
+  if(bar) bar.style.display = tab==='members' ? '' : 'none';
   if(tab==='members') renderManage();
   else renderSettings();
 }
@@ -958,42 +976,73 @@ function renderManage(){
   const wrap = document.getElementById('manageWrap');
   wrap.innerHTML='';
 
-  // 가족 추가 버튼
-  const addRow = document.createElement('button');
-  addRow.className='nav-btn primary';
-  addRow.style.cssText='width:100%;border-radius:14px;padding:13px;margin-bottom:4px';
-  addRow.innerHTML='＋ 가족 추가';
-  addRow.onclick=openClassModal;
-  wrap.appendChild(addRow);
+
 
   S.classes.forEach((cls,i)=>{
     const students = S.students.filter(s=>s.cls===cls).sort((a,b)=>(a.num||99)-(b.num||99));
     const sec = document.createElement('div');
     sec.className='manage-section';
     sec.style.animationDelay=i*0.05+'s';
-    sec.innerHTML=`
-      <div class="manage-header">
-        <div class="manage-class-name">${cls} <span style="color:var(--muted);font-weight:400;font-size:12px">${students.length}명</span></div>
-        <div class="header-actions">
-          <button class="icon-btn add" onclick="openStudentModal(null,'${cls}')" title="멤버 추가">＋</button>
-          <button class="icon-btn" style="border-color:rgba(167,139,250,.3);color:var(--accent2)" onclick="openEditClassModal('${cls}')" title="가족 이름 수정">✏️</button>
-          <button class="icon-btn del2" onclick="delClass('${cls}')" title="가족 삭제">🗑</button>
-        </div>
-      </div>
-      ${!students.length
-        ? '<div class="empty" style="padding:16px;font-size:12px">멤버를 추가해보세요</div>'
-        : students.map(s=>{
-          const r=roleLabel(s.num);
-          return `
-          <div class="manage-row">
-            <span class="role-badge" style="color:${r.color};background:${r.bg};border:1px solid ${r.border}">${r.text}</span>
-            <div class="m-name">${s.num?s.num+'번 ':''}${s.name}</div>
-            <div style="display:flex;gap:6px">
-              <button class="sm-btn edit" onclick="openStudentModal(${s.id},'${cls}')">수정</button>
-              <button class="sm-btn del"  onclick="delStudent(${s.id})">삭제</button>
-            </div>
-          </div>`;}).join('')
-      }`;
+
+    // 헤더
+    const header = document.createElement('div');
+    header.className='manage-header';
+    header.innerHTML=`<div class="manage-class-name">${cls} <span style="color:var(--muted);font-weight:400;font-size:12px">${students.length}명</span></div>`;
+
+    const actions = document.createElement('div');
+    actions.className='header-actions';
+
+    const addBtn = document.createElement('button');
+    addBtn.className='icon-btn add'; addBtn.title='멤버 추가'; addBtn.textContent='＋';
+    addBtn.addEventListener('click', ()=>openStudentModal(null, cls));
+
+    const editClsBtn = document.createElement('button');
+    editClsBtn.className='icon-btn'; editClsBtn.title='가족 이름 수정'; editClsBtn.textContent='✏️';
+    editClsBtn.style.cssText='border-color:rgba(167,139,250,.3);color:var(--accent2)';
+    editClsBtn.addEventListener('click', ()=>openEditClassModal(cls));
+
+    const delClsBtn = document.createElement('button');
+    delClsBtn.className='icon-btn del2'; delClsBtn.title='가족 삭제'; delClsBtn.textContent='🗑';
+    delClsBtn.addEventListener('click', ()=>delClass(cls));
+
+    actions.appendChild(addBtn);
+    actions.appendChild(editClsBtn);
+    actions.appendChild(delClsBtn);
+    header.appendChild(actions);
+    sec.appendChild(header);
+
+    // 멤버 목록
+    if(!students.length){
+      const empty = document.createElement('div');
+      empty.className='empty'; empty.style.cssText='padding:16px;font-size:12px';
+      empty.textContent='멤버를 추가해보세요';
+      sec.appendChild(empty);
+    } else {
+      students.forEach(s=>{
+        const r = roleLabel(s.num);
+        const row = document.createElement('div');
+        row.className='manage-row';
+        row.innerHTML=`
+          <span class="role-badge" style="color:${r.color};background:${r.bg};border:1px solid ${r.border}">${r.text}</span>
+          <div class="m-name">${s.name}</div>`;
+        const btns = document.createElement('div');
+        btns.style.cssText='display:flex;gap:6px';
+
+        const editBtn = document.createElement('button');
+        editBtn.className='sm-btn edit'; editBtn.textContent='수정';
+        editBtn.addEventListener('click', ()=>openStudentModal(s.id, cls));
+
+        const delBtn = document.createElement('button');
+        delBtn.className='sm-btn del'; delBtn.textContent='삭제';
+        delBtn.addEventListener('click', ()=>delStudent(s.id));
+
+        btns.appendChild(editBtn);
+        btns.appendChild(delBtn);
+        row.appendChild(btns);
+        sec.appendChild(row);
+      });
+    }
+
     wrap.appendChild(sec);
   });
 }
@@ -1453,6 +1502,9 @@ document.getElementById('calConfirmBtn').addEventListener('click', confirmCal);
 // 학생 모달
 document.getElementById('studentCancelBtn').addEventListener('click', closeStudentModal);
 document.getElementById('studentSaveBtn').addEventListener('click', saveStudent);
+
+// 가족 추가 fixed 버튼
+document.getElementById('addFamilyBtn').addEventListener('click', openClassModal);
 
 // 가족 모달
 document.getElementById('classCancelBtn').addEventListener('click', closeClassModal);
