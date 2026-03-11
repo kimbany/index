@@ -355,14 +355,19 @@ header {
     <div style="font-size:13px;color:#6b7280">접속하려면 비밀번호를 입력하세요</div>
   </div>
   <div style="width:100%;max-width:320px;display:flex;flex-direction:column;gap:12px">
-    <input id="lockPwInput" type="password" placeholder="비밀번호 입력"
+    <div id="lockLoadingMsg" style="font-size:12px;color:var(--muted);text-align:center;padding:4px 0">
+      🔄 서버 연결 중...
+    </div>
+    <input id="lockPwInput" type="password" placeholder="잠시만 기다려주세요"
+      disabled
       style="width:100%;background:#1a1d27;border:1.5px solid #2d3148;border-radius:14px;
              padding:14px 18px;color:#f0f2ff;font-size:16px;font-family:'Noto Sans KR',sans-serif;
-             outline:none;text-align:center;letter-spacing:4px;"
+             outline:none;text-align:center;letter-spacing:4px;opacity:0.5;"
 >
-    <button id="lockBtn" style="
+    <button id="lockBtn" disabled style="
       padding:14px;border-radius:14px;border:none;background:#4f8cff;color:#fff;
-      font-size:15px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;">
+      font-size:15px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;
+      opacity:0.5;">
       🔓 입장하기
     </button>
     <div id="lockError" style="text-align:center;color:#ef4444;font-size:13px;font-weight:700;opacity:0;transition:opacity .2s">
@@ -380,7 +385,7 @@ header {
     <label class="inp-label">비밀번호</label>
     <input class="inp" id="editPwInput" type="password" placeholder="비밀번호 입력"
       style="letter-spacing:4px;text-align:center"
-      onkeydown="if(event.key==='Enter') checkEditPw()">
+>
     <div id="editPwError" style="color:#ef4444;font-size:12px;font-weight:700;margin:-8px 0 12px;opacity:0;transition:opacity .2s">
       비밀번호가 틀렸어요
     </div>
@@ -1668,6 +1673,7 @@ function checkLockPw(){
     appUnlocked = true;
     document.getElementById('lockScreen').style.display = 'none';
     document.getElementById('lockPwInput').value = '';
+    document.getElementById('lockBtn').style.opacity = '1';
   } else {
     const err = document.getElementById('lockError');
     err.style.opacity = '1';
@@ -1828,6 +1834,17 @@ function startRealtimeSync(){
     if(data.appPw)  APP_PW  = data.appPw;
     if(data.editPw) EDIT_PW = data.editPw;
     isSyncing = false;
+    // 잠금화면이 떠있으면: 비밀번호 로드 완료 후 입력 활성화
+    const lockScreen = document.getElementById('lockScreen');
+    if(lockScreen && lockScreen.style.display !== 'none'){
+      const inp = document.getElementById('lockPwInput');
+      const loadingMsg = document.getElementById('lockLoadingMsg');
+      inp.disabled = false;
+      inp.placeholder = '비밀번호 입력';
+      inp.focus();
+      document.getElementById('lockBtn').disabled = false;
+      if(loadingMsg) loadingMsg.style.display = 'none';
+    }
     initDraft();
     if(currentView==='check')        renderCheck();
     else if(currentView==='history')  renderHistory();
@@ -1838,9 +1855,18 @@ function startRealtimeSync(){
 }
 
 function bootApp(){
+  // 데이터 없을 때도 잠금화면 입력 활성화
+  const inp = document.getElementById('lockPwInput');
+  const loadingMsg = document.getElementById('lockLoadingMsg');
+  inp.disabled = false;
+  inp.placeholder = '비밀번호 입력';
+  inp.style.opacity = '1';
+  document.getElementById('lockBtn').disabled = false;
+  document.getElementById('lockBtn').style.opacity = '1';
+  if(loadingMsg) loadingMsg.style.display = 'none';
+  inp.focus();
   document.getElementById('dateChipText').textContent = fmtDate(selectedDate);
   initDraft();
-  setView('check');
 }
 
 // ── 앱 시작
