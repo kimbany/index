@@ -657,6 +657,25 @@ header {
   </div>
 </div>
 
+<!-- RESET CONFIRM MODAL -->
+<div class="overlay" id="resetConfirmOverlay" onclick="closeResetConfirmOut(event)">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div style="text-align:center;padding:8px 0 16px">
+      <div style="font-size:32px;margin-bottom:8px">⚠️</div>
+      <div style="font-size:17px;font-weight:900;" id="resetConfirmTitle">정말 초기화할까요?</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:8px;line-height:1.7;" id="resetConfirmDesc"></div>
+    </div>
+    <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);border-radius:12px;padding:12px 14px;font-size:12px;color:#ef4444;margin-bottom:16px;line-height:1.7;">
+      이 작업은 <b>되돌릴 수 없어요.</b><br>CSV 백업을 먼저 받으셨나요?
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button id="resetCancelBtn" style="flex:1;padding:13px;border-radius:12px;border:1.5px solid var(--border);background:var(--card2);color:var(--text);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">아니오</button>
+      <button id="resetConfirmBtn" style="flex:1;padding:13px;border-radius:12px;border:none;background:var(--danger);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">예, 초기화</button>
+    </div>
+  </div>
+</div>
+
 <!-- CONFIRM POPUP -->
 <div id="confirmOverlay" style="
   position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);
@@ -1242,6 +1261,52 @@ function renderSettings(){
   pwCard.appendChild(pwBody);
 
   wrap.appendChild(pwCard);
+
+  // ── 연도 초기화 카드
+  const resetCard = document.createElement('div');
+  resetCard.style.cssText='background:var(--card);border:1.5px solid var(--border);border-radius:18px;overflow:hidden;margin-top:0;';
+
+  const resetHeader = document.createElement('div');
+  resetHeader.style.cssText='padding:14px 16px;background:var(--card2);border-bottom:1px solid var(--border);';
+  resetHeader.innerHTML=`
+    <div style="font-size:14px;font-weight:900;">🔄 연도 초기화</div>
+    <div style="font-size:11px;color:var(--muted);margin-top:3px">새 학기 시작 시 데이터를 초기화해요</div>`;
+  resetCard.appendChild(resetHeader);
+
+  const resetBody = document.createElement('div');
+  resetBody.style.cssText='padding:14px 16px;display:flex;flex-direction:column;gap:10px;';
+
+  // 옵션 설명
+  resetBody.innerHTML=`
+    <div style="font-size:12px;color:var(--muted);line-height:1.8;">
+      초기화 전에 반드시 <b style="color:var(--text)">CSV 내보내기</b>로 백업하세요!<br>
+      초기화 후에는 되돌릴 수 없어요.
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <label style="display:flex;align-items:center;gap:10px;padding:12px;background:var(--card2);border:1.5px solid var(--border);border-radius:12px;cursor:pointer;">
+        <input type="radio" name="resetOpt" id="reset-records" value="records" checked style="accent-color:var(--accent);width:16px;height:16px;">
+        <div>
+          <div style="font-size:13px;font-weight:700;">출석 기록만 초기화</div>
+          <div style="font-size:11px;color:var(--muted);">가족·멤버 정보는 유지, 출석 기록만 삭제</div>
+        </div>
+      </label>
+      <label style="display:flex;align-items:center;gap:10px;padding:12px;background:var(--card2);border:1.5px solid var(--border);border-radius:12px;cursor:pointer;">
+        <input type="radio" name="resetOpt" id="reset-all" value="all" style="accent-color:var(--danger);width:16px;height:16px;">
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--danger);">전체 초기화</div>
+          <div style="font-size:11px;color:var(--muted);">출석 기록 + 멤버 + 가족 모두 삭제</div>
+        </div>
+      </label>
+    </div>`;
+
+  const resetBtn = document.createElement('button');
+  resetBtn.style.cssText='width:100%;padding:13px;border-radius:12px;border:none;background:var(--danger);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;';
+  resetBtn.textContent='🗑 초기화 실행';
+  resetBtn.addEventListener('click', openResetConfirm);
+  resetBody.appendChild(resetBtn);
+
+  resetCard.appendChild(resetBody);
+  wrap.appendChild(resetCard);
 }
 
 function renderManage(){
@@ -1550,6 +1615,45 @@ function showToast(msg){
 //  INIT
 // ════════════════════════════════
 // ════════════════════════════════
+//  RESET
+// ════════════════════════════════
+function openResetConfirm(){
+  const opt = document.querySelector('input[name="resetOpt"]:checked')?.value || 'records';
+  const title = opt==='all' ? '전체 초기화' : '출석 기록 초기화';
+  const desc  = opt==='all'
+    ? '출석 기록, 멤버 정보, 가족 정보가
+모두 삭제됩니다.'
+    : '출석 기록만 삭제됩니다.
+가족·멤버 정보는 유지돼요.';
+  document.getElementById('resetConfirmTitle').textContent = title;
+  document.getElementById('resetConfirmDesc').textContent  = desc;
+  document.getElementById('resetConfirmOverlay').classList.add('open');
+}
+function closeResetConfirm(){
+  document.getElementById('resetConfirmOverlay').classList.remove('open');
+}
+function closeResetConfirmOut(e){
+  if(e.target===document.getElementById('resetConfirmOverlay')) closeResetConfirm();
+}
+function executeReset(){
+  const opt = document.querySelector('input[name="resetOpt"]:checked')?.value || 'records';
+  if(opt==='all'){
+    S.classes  = [];
+    S.students = [];
+    S.records  = {};
+    S.nextId   = 1;
+    S.draft    = {};
+  } else {
+    S.records = {};
+    S.draft   = {};
+  }
+  saveToStorage();
+  closeResetConfirm();
+  setView('check');
+  showToast(opt==='all' ? '🔄 전체 초기화 완료!' : '🔄 출석 기록 초기화 완료!');
+}
+
+// ════════════════════════════════
 //  PASSWORD
 // ════════════════════════════════
 let APP_PW  = '1234';   // ← 앱 접속 비밀번호
@@ -1814,6 +1918,11 @@ document.getElementById('editClassSaveBtn').addEventListener('click', saveEditCl
 // 비밀번호 변경 모달
 document.getElementById('pwChangeCancelBtn').addEventListener('click', closePwChangeModal);
 document.getElementById('pwChangeSaveBtn').addEventListener('click', savePwChange);
+
+// 초기화 확인 모달
+document.getElementById('resetCancelBtn').addEventListener('click', closeResetConfirm);
+document.getElementById('resetConfirmBtn').addEventListener('click', ()=>{ executeReset(); });
+document.getElementById('resetConfirmOverlay').addEventListener('click', closeResetConfirmOut);
 
 // 편집 비밀번호 모달
 document.getElementById('editPwCancelBtn').addEventListener('click', closeEditPwOverlay);
