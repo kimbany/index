@@ -492,6 +492,16 @@ header {
   </div>
   <!-- Stats -->
   <div id="history-stats" style="display:none">
+    <!-- 통계 서브탭 -->
+    <div id="statsSubTabs" style="
+      position:sticky; top:var(--header-sub-h,130px); z-index:89;
+      background:var(--bg); border-bottom:1px solid var(--border);
+      display:flex; padding:0 16px; gap:0;
+    ">
+      <div class="stats-sub-tab active" id="stab-family" data-tab="family">가족별</div>
+      <div class="stats-sub-tab" id="stab-gender" data-tab="gender">성별</div>
+      <div class="stats-sub-tab" id="stab-dept" data-tab="dept">청년부</div>
+    </div>
     <div class="classes-wrap" id="statsWrap"></div>
   </div>
 </div>
@@ -633,8 +643,20 @@ header {
       </div>
     </div>
 
-    <label class="inp-label">연락처</label>
-    <input class="inp" id="sPhone" placeholder="010-0000-0000" type="tel" maxlength="15">
+    <div style="display:flex;gap:10px">
+      <div style="flex:1">
+        <label class="inp-label">연락처</label>
+        <input class="inp" id="sPhone" placeholder="010-0000-0000" type="tel" maxlength="15">
+      </div>
+      <div style="width:80px">
+        <label class="inp-label">성별</label>
+        <select class="inp" id="sGender">
+          <option value="">-</option>
+          <option value="M">남</option>
+          <option value="F">여</option>
+        </select>
+      </div>
+    </div>
 
     <div class="row-btns">
       <button class="btn cancel" id="studentCancelBtn">취소</button>
@@ -1108,6 +1130,82 @@ function delRecord(key){
 // ════════════════════════════════
 //  STATS VIEW
 // ════════════════════════════════
+let statsMode = 'family'; // 'family' | 'gender' | 'dept'
+
+function setStatsMode(mode){
+  statsMode = mode;
+  ['family','gender','dept'].forEach(m=>{
+    document.getElementById('stab-'+m).classList.toggle('active', m===mode);
+  });
+  renderStats();
+}
+
+function barColor(pct){
+  if(pct>=80) return 'linear-gradient(90deg,#22c55e,#4ade80)';
+  if(pct>=60) return 'linear-gradient(90deg,#f59e0b,#fcd34d)';
+  return 'linear-gradient(90deg,#ef4444,#f87171)';
+}
+
+// 공통: 그룹 내 멤버 목록으로 통계 섹션 생성
+function buildStatSection(title, students, allKeys){
+  if(!students.length) return null;
+  // 이 그룹 멤버가 속한 가족들의 날짜 (해당 멤버가 포함된 날짜 유니온)
+  const days = allKeys.filter(k=>{
+    return students.some(s=> Object.entries(S.records[k]||{}).some(([cls,ids])=> s.cls===cls && ids));
+  });
+  // 전체 기록일 수 (모든 날짜 기준)
+  const totalDays = allKeys.length;
+  if(!totalDays) return null;
+
+  const studentStats = students.map(s=>{
+    const presentCount = allKeys.filter(k=>(S.records[k]?.[s.cls]||[]).includes(s.id)).length;
+    // 해당 멤버 가족 기록일
+    const myDays = allKeys.filter(k=> S.records[k]?.[s.cls] !== undefined).length;
+    const base = myDays || 1;
+    const pct = Math.round(presentCount / base * 100);
+    return {...s, presentCount, pct, myDays};
+  }).sort((a,b)=>b.pct-a.pct);
+
+  const avgPct = Math.round(studentStats.reduce((a,s)=>a+s.pct,0) / (studentStats.length||1));
+
+  const sec = document.createElement('div');
+  sec.className = 'stats-section';
+  sec.innerHTML = `
+    <div class="stats-cls-header">
+      <div>
+        <div class="stats-cls-name">${title}</div>
+        <div class="stats-cls-meta">${studentStats.length}명 · 평균 출석률 ${avgPct}%</div>
+      </div>
+      <div style="font-family:'Space Mono',monospace;font-size:22px;font-weight:700;
+        color:${avgPct>=80?'var(--present)':avgPct>=60?'#f59e0b':'var(--danger)'}">
+        ${avgPct}%
+      </div>
+    </div>
+    ${studentStats.map((s,i)=>{
+      const r=roleLabel(s.num);
+      const deptLabel = s.dept ? s.dept+'청' : '';
+      const genderLabel = s.gender==='M'?'♂':s.gender==='F'?'♀':'';
+      return `
+        <div class="stat-row">
+          <div class="stat-rank">${i+1}</div>
+          <span class="role-badge" style="color:${r.color};background:${r.bg};border:1px solid ${r.border};flex-shrink:0">${r.text}</span>
+          <div class="stat-bar-wrap">
+            <div class="stat-name-row">
+              <span class="stat-name">${s.name}
+                <span style="font-size:10px;color:var(--muted);margin-left:4px">${deptLabel} ${genderLabel}</span>
+              </span>
+              <span class="stat-pct" style="color:${s.pct>=80?'var(--present)':s.pct>=60?'#f59e0b':'var(--danger)'}">${s.pct}%</span>
+            </div>
+            <div class="stat-bar-track">
+              <div class="stat-bar-fill" style="width:${s.pct}%;background:${barColor(s.pct)}"></div>
+            </div>
+            <div class="stat-count">${s.presentCount} / ${s.myDays}일 출석 (${s.cls})</div>
+          </div>
+        </div>`;
+    }).join('')}`;
+  return sec;
+}
+
 function renderStats(){
   const wrap = document.getElementById('statsWrap');
   const keys = Object.keys(S.records);
@@ -1117,63 +1215,75 @@ function renderStats(){
   }
   wrap.innerHTML = '';
 
-  // 반별로 섹션 나누기
-  S.classes.forEach((cls, ci) => {
-    const students = S.students.filter(s=>s.cls===cls).sort((a,b)=>(a.num||99)-(b.num||99));
-    if(!students.length) return;
-
-    // 이 반이 기록된 날짜 수 (해당 반 데이터가 있는 날만)
-    const clsDays = keys.filter(k => S.records[k]?.[cls] !== undefined);
-    const totalDays = clsDays.length;
-
-    if(!totalDays) return;
-
-    // 학생별 출석 수 계산
-    const studentStats = students.map(s => {
-      const presentCount = clsDays.filter(k => (S.records[k][cls] || []).includes(s.id)).length;
-      const pct = Math.round(presentCount / totalDays * 100);
-      return { ...s, presentCount, pct };
-    }).sort((a,b) => b.pct - a.pct); // 출석률 높은 순
-
-    // 반 평균
-    const avgPct = Math.round(studentStats.reduce((a,s)=>a+s.pct,0) / studentStats.length);
-
-    // 바 색상 함수
-    function barColor(pct){
-      if(pct>=80) return 'linear-gradient(90deg,#22c55e,#4ade80)';
-      if(pct>=60) return 'linear-gradient(90deg,#f59e0b,#fcd34d)';
-      return 'linear-gradient(90deg,#ef4444,#f87171)';
-    }
-
-    const sec = document.createElement('div');
-    sec.className = 'stats-section';
-    sec.style.animationDelay = ci*0.06+'s';
-    sec.innerHTML = `
-      <div class="stats-cls-header">
-        <div>
-          <div class="stats-cls-name">${cls}</div>
-          <div class="stats-cls-meta">총 ${totalDays}일 기록 · 반 평균 출석률 ${avgPct}%</div>
-        </div>
-        <div style="font-family:'Space Mono',monospace;font-size:22px;font-weight:700;color:${avgPct>=80?'var(--present)':avgPct>=60?'#f59e0b':'var(--danger)'}">${avgPct}%</div>
-      </div>
-      ${studentStats.map((s,i)=>{const r=roleLabel(s.num); return `
-        <div class="stat-row">
-          <div class="stat-rank">${i+1}</div>
-          <span class="role-badge" style="color:${r.color};background:${r.bg};border:1px solid ${r.border};flex-shrink:0">${r.text}</span>
-          <div class="stat-bar-wrap">
-            <div class="stat-name-row">
-              <span class="stat-name">${s.name}</span>
-              <span class="stat-pct" style="color:${s.pct>=80?'var(--present)':s.pct>=60?'#f59e0b':'var(--danger)'}">${s.pct}%</span>
-            </div>
-            <div class="stat-bar-track">
-              <div class="stat-bar-fill" style="width:${s.pct}%;background:${barColor(s.pct)}"></div>
-            </div>
-            <div class="stat-count">${s.presentCount} / ${totalDays}일 출석</div>
+  if(statsMode === 'family'){
+    // ── 가족별
+    S.classes.forEach((cls,ci)=>{
+      const students = S.students.filter(s=>s.cls===cls).sort((a,b)=>(a.num||99)-(b.num||99));
+      if(!students.length) return;
+      const clsDays = keys.filter(k=> S.records[k]?.[cls] !== undefined);
+      if(!clsDays.length) return;
+      const studentStats = students.map(s=>{
+        const presentCount = clsDays.filter(k=>(S.records[k][cls]||[]).includes(s.id)).length;
+        const pct = Math.round(presentCount / clsDays.length * 100);
+        return {...s, presentCount, pct, myDays: clsDays.length};
+      }).sort((a,b)=>b.pct-a.pct);
+      const avgPct = Math.round(studentStats.reduce((a,s)=>a+s.pct,0)/(studentStats.length||1));
+      const sec = document.createElement('div');
+      sec.className='stats-section'; sec.style.animationDelay=ci*0.06+'s';
+      sec.innerHTML=`
+        <div class="stats-cls-header">
+          <div>
+            <div class="stats-cls-name">${cls}</div>
+            <div class="stats-cls-meta">총 ${clsDays.length}일 기록 · 평균 ${avgPct}%</div>
           </div>
-        </div>`;}).join('')}
-    `;
-    wrap.appendChild(sec);
-  });
+          <div style="font-family:'Space Mono',monospace;font-size:22px;font-weight:700;
+            color:${avgPct>=80?'var(--present)':avgPct>=60?'#f59e0b':'var(--danger)'}">
+            ${avgPct}%</div>
+        </div>
+        ${studentStats.map((s,i)=>{const r=roleLabel(s.num); return `
+          <div class="stat-row">
+            <div class="stat-rank">${i+1}</div>
+            <span class="role-badge" style="color:${r.color};background:${r.bg};border:1px solid ${r.border};flex-shrink:0">${r.text}</span>
+            <div class="stat-bar-wrap">
+              <div class="stat-name-row">
+                <span class="stat-name">${s.name}
+                  <span style="font-size:10px;color:var(--muted);margin-left:3px">${s.dept?s.dept+'청':''} ${s.gender==='M'?'♂':s.gender==='F'?'♀':''}</span>
+                </span>
+                <span class="stat-pct" style="color:${s.pct>=80?'var(--present)':s.pct>=60?'#f59e0b':'var(--danger)'}">${s.pct}%</span>
+              </div>
+              <div class="stat-bar-track"><div class="stat-bar-fill" style="width:${s.pct}%;background:${barColor(s.pct)}"></div></div>
+              <div class="stat-count">${s.presentCount} / ${s.myDays}일 출석</div>
+            </div>
+          </div>`;}).join('')}`;
+      wrap.appendChild(sec);
+    });
+
+  } else if(statsMode === 'gender'){
+    // ── 성별
+    const groups = [
+      { key:'M', label:'👨 남성' },
+      { key:'F', label:'👩 여성' },
+      { key:'',  label:'⬜ 성별 미입력' },
+    ];
+    groups.forEach(g=>{
+      const students = S.students.filter(s=>(s.gender||'')=== g.key);
+      const sec = buildStatSection(g.label, students, keys);
+      if(sec) wrap.appendChild(sec);
+    });
+
+  } else if(statsMode === 'dept'){
+    // ── 청년부별
+    const groups = [
+      { key:'1', label:'🔵 1청년부' },
+      { key:'2', label:'🟣 2청년부' },
+      { key:'',  label:'⬜ 청년부 미입력' },
+    ];
+    groups.forEach(g=>{
+      const students = S.students.filter(s=>(s.dept||'')=== g.key);
+      const sec = buildStatSection(g.label, students, keys);
+      if(sec) wrap.appendChild(sec);
+    });
+  }
 
   if(!wrap.children.length){
     wrap.innerHTML='<div class="empty">통계를 낼 수 있는 데이터가 없어요</div>';
@@ -1261,6 +1371,7 @@ function openMemberDetail(id){
   const fields = [
     { label:'청년부', value: s.dept ? s.dept+'청년부' : '-' },
     { label:'가족',   value: s.cls || '-' },
+    { label:'성별',   value: s.gender==='M' ? '남성 👨' : s.gender==='F' ? '여성 👩' : '-' },
     { label:'생년월일', value: s.birth || '-' },
     { label:'연락처', value: s.phone || '-' },
     { label:'등록일', value: s.regDate || '-' },
@@ -1497,6 +1608,7 @@ function openStudentModal(id, defCls){
   document.getElementById('sNum').value     = s?(s.num||''):'';
   document.getElementById('sBirth').value   = s?(s.birth||''):'';
   document.getElementById('sPhone').value   = s?(s.phone||''):'';
+  document.getElementById('sGender').value  = s?(s.gender||''):'';
   document.getElementById('sRegDate').value = s?(s.regDate||today):today;
   const sel=document.getElementById('sCls');
   sel.innerHTML=S.classes.map(c=>`<option ${c===(s?s.cls:defCls)?'selected':''}>${c}</option>`).join('');
@@ -1513,13 +1625,14 @@ function saveStudent(){
   const cls    = document.getElementById('sCls').value;
   const birth  = document.getElementById('sBirth').value;
   const phone  = document.getElementById('sPhone').value.trim();
+  const gender = document.getElementById('sGender').value;
   const regDate= document.getElementById('sRegDate').value;
   if(editingId){
     const s=S.students.find(x=>x.id===editingId);
-    s.name=name; s.num=num; s.dept=dept; s.cls=cls; s.birth=birth; s.phone=phone; s.regDate=regDate;
+    s.name=name; s.num=num; s.dept=dept; s.cls=cls; s.birth=birth; s.phone=phone; s.gender=gender; s.regDate=regDate;
     showToast(`✏️ ${name} 수정 완료!`);
   } else {
-    S.students.push({id:S.nextId++, name, num, dept, cls, birth, phone, regDate});
+    S.students.push({id:S.nextId++, name, num, dept, cls, birth, phone, gender, regDate});
     showToast(`🎉 ${name} 추가 완료!`);
   }
   saveToStorage();
@@ -2002,13 +2115,17 @@ scrollTopBtn.addEventListener('click', ()=>{
 function updateHeaderHeight(){
   const hh = document.querySelector('header').offsetHeight;
   document.documentElement.style.setProperty('--header-h', hh + 'px');
+  // 기록보기 서브탭 높이 계산 (기록/통계 탭)
+  const histSubTabs = document.querySelector('#view-history .sub-tabs');
+  if(histSubTabs){
+    const subH = histSubTabs.offsetHeight;
+    document.documentElement.style.setProperty('--header-sub-h', (hh + subH) + 'px');
+  }
 }
 updateHeaderHeight();
 window.addEventListener('resize', updateHeaderHeight);
-// PWA/사파리에서 safe area 적용 후 높이 재계산
 setTimeout(updateHeaderHeight, 100);
 setTimeout(updateHeaderHeight, 500);
-// ResizeObserver로 헤더 크기 변화 감지
 if(window.ResizeObserver){
   new ResizeObserver(updateHeaderHeight).observe(document.querySelector('header'));
 }
@@ -2059,6 +2176,9 @@ document.getElementById('exportCsvBtn').addEventListener('click', exportCSV);
 // 히스토리 서브탭
 document.getElementById('subtab-log').addEventListener('click', ()=>setHistoryTab('log'));
 document.getElementById('subtab-stats').addEventListener('click', ()=>setHistoryTab('stats'));
+document.getElementById('stab-family').addEventListener('click', ()=>setStatsMode('family'));
+document.getElementById('stab-gender').addEventListener('click', ()=>setStatsMode('gender'));
+document.getElementById('stab-dept').addEventListener('click',   ()=>setStatsMode('dept'));
 
 // 편집 서브탭
 document.getElementById('subtab-members').addEventListener('click', ()=>setManageTab('members'));
