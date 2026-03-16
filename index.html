@@ -497,11 +497,12 @@ header {
       position:sticky; top:var(--header-sub-h,130px); z-index:89;
       background:rgba(15,17,23,0.96); backdrop-filter:blur(12px);
       border-bottom:1px solid var(--border);
-      padding:10px 16px; display:flex; gap:8px;
+      padding:8px 16px; display:flex; gap:6px;
+      overflow-x:auto; scrollbar-width:none;
     ">
-      <button class="stats-pill active" id="stab-family">🏠 가족별</button>
-      <button class="stats-pill" id="stab-gender">⚧ 성별</button>
-      <button class="stats-pill" id="stab-dept">✝ 청년부</button>
+      <button class="stats-pill active" id="stab-family">가족별</button>
+      <button class="stats-pill" id="stab-gender">성별</button>
+      <button class="stats-pill" id="stab-dept">청년부</button>
     </div>
     <div class="classes-wrap" id="statsWrap"></div>
   </div>
