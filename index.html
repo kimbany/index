@@ -526,6 +526,69 @@ header {
       <button class="stats-pill" id="stab-gender">성별</button>
       <button class="stats-pill" id="stab-dept">청년부</button>
     </div>
+    <!-- 기간 필터 바 -->
+    <div id="statsDateBar" style="
+      padding:8px 16px 10px;
+      border-bottom:1px solid var(--border);
+      background:rgba(15,17,23,0.96); backdrop-filter:blur(12px);
+      position:sticky; top:var(--header-stats-h,170px); z-index:88;
+    ">
+      <!-- 필터 타입 선택 -->
+      <div style="display:flex;gap:6px;margin-bottom:8px;overflow-x:auto;scrollbar-width:none;">
+        <button class="stats-pill active" id="sdate-all">전체</button>
+        <button class="stats-pill" id="sdate-half1">상반기</button>
+        <button class="stats-pill" id="sdate-half2">하반기</button>
+        <button class="stats-pill" id="sdate-month">월 선택</button>
+        <button class="stats-pill" id="sdate-custom">기간 설정</button>
+      </div>
+      <!-- 월 선택 -->
+      <div id="statsMonthRow" style="display:none;flex-direction:column;gap:8px;">
+        <!-- 연도 + 월 -->
+        <div style="display:flex;gap:6px;">
+          <select id="statsMonthYear" style="
+            background:var(--card2);border:1.5px solid var(--border);border-radius:10px;
+            padding:6px 10px;color:var(--text);font-size:13px;font-weight:700;
+            font-family:'Noto Sans KR',sans-serif;outline:none;flex-shrink:0;
+          "></select>
+          <select id="statsMonthSel" style="
+            background:var(--card2);border:1.5px solid var(--border);border-radius:10px;
+            padding:6px 10px;color:var(--text);font-size:13px;font-weight:700;
+            font-family:'Noto Sans KR',sans-serif;outline:none;flex:1;
+          ">
+            <option value="0">전체 월</option>
+            <option value="1">1월</option><option value="2">2월</option>
+            <option value="3">3월</option><option value="4">4월</option>
+            <option value="5">5월</option><option value="6">6월</option>
+            <option value="7">7월</option><option value="8">8월</option>
+            <option value="9">9월</option><option value="10">10월</option>
+            <option value="11">11월</option><option value="12">12월</option>
+          </select>
+        </div>
+        <!-- 일 선택 (해당 월에 기록 있는 날짜만) -->
+        <div id="statsDayRow" style="display:none;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px;flex-wrap:nowrap;">
+          <!-- JS로 동적 생성 -->
+        </div>
+      </div>
+      <!-- 기간 설정 -->
+      <div id="statsCustomRow" style="display:none;gap:8px;align-items:center;flex-wrap:wrap;">
+        <input type="date" id="statsFromDate" style="
+          flex:1;background:var(--card2);border:1.5px solid var(--border);border-radius:10px;
+          padding:6px 10px;color:var(--text);font-size:13px;font-weight:700;
+          font-family:'Noto Sans KR',sans-serif;outline:none;min-width:130px;
+        ">
+        <span style="color:var(--muted);font-size:12px;font-weight:700;">~</span>
+        <input type="date" id="statsToDate" style="
+          flex:1;background:var(--card2);border:1.5px solid var(--border);border-radius:10px;
+          padding:6px 10px;color:var(--text);font-size:13px;font-weight:700;
+          font-family:'Noto Sans KR',sans-serif;outline:none;min-width:130px;
+        ">
+        <button id="statsCustomApply" style="
+          padding:6px 14px;border-radius:10px;border:none;
+          background:var(--accent);color:#fff;font-size:13px;font-weight:700;
+          cursor:pointer;font-family:'Noto Sans KR',sans-serif;flex-shrink:0;
+        ">적용</button>
+      </div>
+    </div>
     <div class="classes-wrap" id="statsWrap"></div>
   </div>
 </div>
@@ -1155,6 +1218,11 @@ function delRecord(key){
 //  STATS VIEW
 // ════════════════════════════════
 let statsMode = 'family'; // 'family' | 'gender' | 'dept'
+let statsDateMode = 'all'; // 'all'|'half1'|'half2'|'month'|'custom'
+let statsMonthFilter = { year: new Date().getFullYear(), month: 0, day: '' };
+// month=0이면 해당 연도 전체, day=''이면 월 전체
+let statsCustomFrom = '';
+let statsCustomTo   = '';
 
 function setStatsMode(mode){
   statsMode = mode;
@@ -1162,6 +1230,140 @@ function setStatsMode(mode){
     document.getElementById('stab-'+m).classList.toggle('active', m===mode);
   });
   renderStats();
+}
+
+function setStatsDateMode(mode){
+  statsDateMode = mode;
+  ['all','half1','half2','month','custom'].forEach(m=>{
+    document.getElementById('sdate-'+m).classList.toggle('active', m===mode);
+  });
+  // 월 선택 / 기간 설정 UI 토글
+  const monthRow  = document.getElementById('statsMonthRow');
+  const customRow = document.getElementById('statsCustomRow');
+  monthRow.style.display  = mode==='month'  ? 'flex' : 'none';
+  if(mode==='month') monthRow.style.flexDirection = 'column';
+  customRow.style.display = mode==='custom' ? 'flex' : 'none';
+  if(mode !== 'custom') renderStats();
+}
+
+// 날짜 필터 적용 — keys 배열을 필터링해서 반환
+function filterStatKeys(keys){
+  if(statsDateMode === 'all') return keys;
+
+  const now = new Date();
+  const year = now.getFullYear();
+
+  if(statsDateMode === 'half1'){
+    return keys.filter(k=>{ const m=+k.split('-')[1]; return k.startsWith(year) && m>=1 && m<=6; });
+  }
+  if(statsDateMode === 'half2'){
+    return keys.filter(k=>{ const m=+k.split('-')[1]; return k.startsWith(year) && m>=7 && m<=12; });
+  }
+  if(statsDateMode === 'month'){
+    const y = statsMonthFilter.year;
+    const m = statsMonthFilter.month;
+    const d = statsMonthFilter.day;
+    return keys.filter(k=>{
+      if(!k.startsWith(String(y))) return false;
+      if(m && m !== 0){
+        const km = +k.split('-')[1];
+        if(km !== m) return false;
+      }
+      if(d) return k === d;
+      return true;
+    });
+  }
+  if(statsDateMode === 'custom'){
+    return keys.filter(k=> (!statsCustomFrom || k>=statsCustomFrom) && (!statsCustomTo || k<=statsCustomTo));
+  }
+  return keys;
+}
+
+function initStatsDateUI(){
+  const allKeys = Object.keys(S.records).sort();
+  if(!allKeys.length) return;
+  const years = [...new Set(allKeys.map(k=>k.split('-')[0]))].sort().reverse();
+  const yearSel = document.getElementById('statsMonthYear');
+  const curYear = String(statsMonthFilter.year);
+  if(yearSel.innerHTML === '' || ![...yearSel.options].some(o=>o.value===curYear)){
+    yearSel.innerHTML = years.map(y=>`<option value="${y}">${y}년</option>`).join('');
+  }
+  yearSel.value = statsMonthFilter.year;
+  document.getElementById('statsMonthSel').value = statsMonthFilter.month;
+  updateStatsDayRow(allKeys);
+}
+
+function updateStatsDayRow(allKeys){
+  const dayRow = document.getElementById('statsDayRow');
+  const y = statsMonthFilter.year;
+  const m = statsMonthFilter.month;
+
+  if(!m || m === 0){
+    dayRow.style.display = 'none';
+    statsMonthFilter.day = '';
+    return;
+  }
+
+  // 해당 연월에 기록 있는 날짜만
+  const mStr = String(m).padStart(2,'0');
+  const dayKeys = allKeys.filter(k=> k.startsWith(`${y}-${mStr}`)).sort();
+
+  if(!dayKeys.length){
+    dayRow.style.display = 'none';
+    statsMonthFilter.day = '';
+    return;
+  }
+
+  dayRow.style.display = 'flex';
+  dayRow.innerHTML = '';
+
+  // "전체" 버튼
+  const allBtn = document.createElement('button');
+  allBtn.className = 'stats-pill' + (statsMonthFilter.day==='' ? ' active' : '');
+  allBtn.textContent = '전체';
+  allBtn.addEventListener('click', ()=>{
+    statsMonthFilter.day = '';
+    updateStatsDayRow(allKeys);
+    renderStats();
+  });
+  dayRow.appendChild(allBtn);
+
+  const w = ['일','월','화','수','목','금','토'];
+  dayKeys.forEach(k=>{
+    const [,, dd] = k.split('-');
+    const dateObj = new Date(k);
+    const dayBtn = document.createElement('button');
+    dayBtn.className = 'stats-pill' + (statsMonthFilter.day===k ? ' active' : '');
+    dayBtn.innerHTML = `${+dd}일<span style="font-size:10px;display:block;opacity:0.7">${w[dateObj.getDay()]}</span>`;
+    dayBtn.style.cssText += 'padding:4px 10px;line-height:1.3;text-align:center;';
+    dayBtn.addEventListener('click', ()=>{
+      statsMonthFilter.day = k;
+      updateStatsDayRow(allKeys);
+      renderStats();
+    });
+    dayRow.appendChild(dayBtn);
+  });
+}
+
+function getPeriodLabel(){
+  const now = new Date();
+  if(statsDateMode==='all')    return '';
+  if(statsDateMode==='half1')  return `${now.getFullYear()}년 상반기 (1~6월)`;
+  if(statsDateMode==='half2')  return `${now.getFullYear()}년 하반기 (7~12월)`;
+  if(statsDateMode==='month'){
+    const y = statsMonthFilter.year;
+    const m = statsMonthFilter.month;
+    const d = statsMonthFilter.day;
+    if(d){ const [,mm,dd]=d.split('-'); return `${y}년 ${+mm}월 ${+dd}일`; }
+    if(m) return `${y}년 ${m}월`;
+    return `${y}년 전체`;
+  }
+  if(statsDateMode==='custom'){
+    const f = statsCustomFrom || '?';
+    const t = statsCustomTo   || '?';
+    return `${f} ~ ${t}`;
+  }
+  return '';
 }
 
 function barColor(pct){
@@ -1232,12 +1434,26 @@ function buildStatSection(title, students, allKeys){
 
 function renderStats(){
   const wrap = document.getElementById('statsWrap');
-  const keys = Object.keys(S.records);
-  if(!keys.length){
+  initStatsDateUI();
+  const allKeys = Object.keys(S.records).sort();
+  const keys = filterStatKeys(allKeys);
+  if(!allKeys.length){
     wrap.innerHTML='<div class="empty">저장된 기록이 없어요<br>출석체크 후 저장하면 통계가 생겨요 📊</div>';
     return;
   }
+  if(!keys.length){
+    wrap.innerHTML='<div class="empty">선택한 기간에 출석 기록이 없어요 📅</div>';
+    return;
+  }
+  // 기간 요약 표시
+  const periodLabel = getPeriodLabel();
   wrap.innerHTML = '';
+  if(periodLabel){
+    const lbl = document.createElement('div');
+    lbl.style.cssText='padding:8px 16px 0;font-size:12px;color:var(--accent);font-weight:700;';
+    lbl.textContent = '📅 ' + periodLabel + ' · ' + keys.length + '일 기록';
+    wrap.appendChild(lbl);
+  }
 
   if(statsMode === 'family'){
     // ── 가족별
@@ -2139,11 +2355,16 @@ scrollTopBtn.addEventListener('click', ()=>{
 function updateHeaderHeight(){
   const hh = document.querySelector('header').offsetHeight;
   document.documentElement.style.setProperty('--header-h', hh + 'px');
-  // 기록보기 서브탭 높이 계산 (기록/통계 탭)
   const histSubTabs = document.querySelector('#view-history .sub-tabs');
   if(histSubTabs){
     const subH = histSubTabs.offsetHeight;
     document.documentElement.style.setProperty('--header-sub-h', (hh + subH) + 'px');
+    // statsSubTabs 아래 = header + histSubTabs + statsSubTabs
+    const statsSubTabs = document.getElementById('statsSubTabs');
+    if(statsSubTabs){
+      const statsSubH = statsSubTabs.offsetHeight;
+      document.documentElement.style.setProperty('--header-stats-h', (hh + subH + statsSubH) + 'px');
+    }
   }
 }
 updateHeaderHeight();
@@ -2203,6 +2424,28 @@ document.getElementById('subtab-stats').addEventListener('click', ()=>setHistory
 document.getElementById('stab-family').addEventListener('click', ()=>setStatsMode('family'));
 document.getElementById('stab-gender').addEventListener('click', ()=>setStatsMode('gender'));
 document.getElementById('stab-dept').addEventListener('click',   ()=>setStatsMode('dept'));
+
+// 통계 날짜 필터
+['all','half1','half2','month','custom'].forEach(m=>{
+  document.getElementById('sdate-'+m).addEventListener('click', ()=>setStatsDateMode(m));
+});
+document.getElementById('statsMonthYear').addEventListener('change', function(){
+  statsMonthFilter.year = +this.value;
+  statsMonthFilter.day = '';
+  renderStats();
+});
+document.getElementById('statsMonthSel').addEventListener('change', function(){
+  statsMonthFilter.month = +this.value;
+  statsMonthFilter.day = '';
+  const allKeys = Object.keys(S.records).sort();
+  updateStatsDayRow(allKeys);
+  renderStats();
+});
+document.getElementById('statsCustomApply').addEventListener('click', ()=>{
+  statsCustomFrom = document.getElementById('statsFromDate').value;
+  statsCustomTo   = document.getElementById('statsToDate').value;
+  renderStats();
+});
 
 // 편집 서브탭
 document.getElementById('subtab-members').addEventListener('click', ()=>setManageTab('members'));
