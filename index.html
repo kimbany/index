@@ -495,12 +495,13 @@ header {
     <!-- 통계 서브탭 -->
     <div id="statsSubTabs" style="
       position:sticky; top:var(--header-sub-h,130px); z-index:89;
-      background:var(--bg); border-bottom:1px solid var(--border);
-      display:flex; padding:0 16px; gap:0;
+      background:rgba(15,17,23,0.96); backdrop-filter:blur(12px);
+      border-bottom:1px solid var(--border);
+      padding:10px 16px; display:flex; gap:8px;
     ">
-      <div class="stats-sub-tab active" id="stab-family" data-tab="family">가족별</div>
-      <div class="stats-sub-tab" id="stab-gender" data-tab="gender">성별</div>
-      <div class="stats-sub-tab" id="stab-dept" data-tab="dept">청년부</div>
+      <button class="stats-pill active" id="stab-family">🏠 가족별</button>
+      <button class="stats-pill" id="stab-gender">⚧ 성별</button>
+      <button class="stats-pill" id="stab-dept">✝ 청년부</button>
     </div>
     <div class="classes-wrap" id="statsWrap"></div>
   </div>
